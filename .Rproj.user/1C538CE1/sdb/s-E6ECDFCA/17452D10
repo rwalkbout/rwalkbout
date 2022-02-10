@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "options(digits=15, warn = -1)\nif (!require(tidyverse)) install.packages('tidyverse')\nif (!require(here)) install.packages('here')\nif (!require(lubridate)) install.packages('lubridate')\nif (!require(data.table)) install.packages('data.table')\nif (!require(hms)) install.packages('hms')\nif (!require(sp)) install.packages('sp')\nif (!require(sf)) install.packages('sf')\nif (!require(lwgeom)) install.packages(c('lwgeom','Rcpp'))\nif (!require(geosphere)) install.packages('geosphere')\nif (!require(measurements)) install.packages('measurements')\nif (!require(latticeExtra)) install.packages('latticeExtra')\nif (!require(testthat)) install.packages('testthat')\n\n# source(\"Bout-Function.R\")\n# source(\"GPS-Function.R\")\n# source(\"Kang 2013 - thresholds.R\")\n# source(\"metadata_extraction.R\") # metadata extraction\n# source(\"define_epochs.R\") # assign time-series epochs\n# source(\"define_physical_activity_bouts.R\") # extract accelerometry activity\n# source(\"define_GPS_features.R\") # extract GPS activity\n# source(\"process_one_subject.R\") # get bout summary info from one subject's accelerometry and GPS data\n# source(\"process_many_subject.R\") # a loop version of process_one_subject.R\n#\n\n",
+    "created" : 1644460561692.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "4168946197",
+    "id" : "17452D10",
+    "lastKnownWriteTime" : 1644460933,
+    "last_content_update" : 1644460933164,
+    "path" : "~/Desktop/retrieved_backup/epiProject/walk_bout/walk_bout_v0.0.2/make_package/rwalkabout/R/setup.R",
+    "project_path" : "R/setup.R",
+    "properties" : {
+        "marks" : "<:24,-1\n>:24,0"
+    },
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

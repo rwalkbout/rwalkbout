@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "# source(\"setup.R\")\n#\n# ROOT_ <- \"/Users/wzhou87/Desktop/retrieved_backup/epiProject/walk_bout\"\n# #accelerometry_phase2 <- file.path(ROOT_,\"data/test/Actigraphy/Phase2\")\n# #gps_phase2 <- file.path(ROOT_,\"data/test/GPS/Phase2\")\n# #result_save_folder <- file.path(ROOT_, \"data/result/test\")\n#\n# accelerometry_phase2 <- file.path(ROOT_,\"data/Actigraphy/Phase2\")\n# gps_phase2 <- file.path(ROOT_,\"data/GPS/Phase2\")\n# result_save_folder <- file.path(ROOT_, \"data/result/phase2\")\n#\n# path_result <- process_many_subject(auto_search = TRUE, acc_folder_path = accelerometry_phase2, gps_folder_path = gps_phase2, result_save_folder = result_save_folder)\n#\n#\n",
+    "created" : 1644460561697.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1155008265",
+    "id" : "4B328A0A",
+    "lastKnownWriteTime" : 1644461052,
+    "last_content_update" : 1644461052656,
+    "path" : "~/Desktop/retrieved_backup/epiProject/walk_bout/walk_bout_v0.0.2/make_package/rwalkabout/R/random_code.R",
+    "project_path" : "R/random_code.R",
+    "properties" : {
+        "marks" : "<:10,0\n>:10,1"
+    },
+    "relative_order" : 6,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

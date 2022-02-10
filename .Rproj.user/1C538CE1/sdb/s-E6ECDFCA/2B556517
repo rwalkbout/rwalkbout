@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "# source(\"setup.R\")\n#\n# p1 <- \"walk_bout/data/test/Actigraphy/Phase2/100021 (2016-12-10)15sec.csv\"\n# q1 <- \"walk_bout/data/test/GPS/Phase2/100021_GPS.csv\"\n# summary_with_start_end_date <- process_one_subject(acc_file_path = p1, gps_file_path = q1)\n#\n# expect_equal(sum(summary_with_start_end_date$NonWalk2_GPS, na.rm = TRUE), 12)\n# expect_equal(summary_with_start_end_date$mean_accel_count[7], 614.6)\n# expect_equal(summary_with_start_end_date$max_accel_count[2], 1433)\n#\n#\n",
+    "created" : 1644461030316.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2641485784",
+    "id" : "2B556517",
+    "lastKnownWriteTime" : 1644461051,
+    "last_content_update" : 1644461051130,
+    "path" : "~/Desktop/retrieved_backup/epiProject/walk_bout/walk_bout_v0.0.2/make_package/rwalkabout/R/example.R",
+    "project_path" : "R/example.R",
+    "properties" : {
+        "marks" : "<:11,-1\n>:11,0"
+    },
+    "relative_order" : 7,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

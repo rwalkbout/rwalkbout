@@ -1,0 +1,15 @@
+Package: rwalkabout
+Type: Package
+Title: Generate walk bout information from accelerometry and GPS data.
+Version: 0.0.2
+Author: Weipeng Zhou, Steve Mooney
+Maintainer: Weipeng Zhou <wzhou87@uw.edu>
+Description: First matches accelerometry and GPS for each subject.
+    Then create bouts from accelerometry data. Then filter out bouts
+    with insufficient GPS record counts.
+License: GPL
+Encoding: UTF-8
+LazyData: true
+Imports:
+    testthat, tidyverse
+RoxygenNote: 7.1.2

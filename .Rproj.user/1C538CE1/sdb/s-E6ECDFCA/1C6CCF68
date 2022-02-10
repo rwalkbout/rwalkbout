@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "\n# Abstraction of metadata and threshold criteria from Kang et al. 2013\n# Information was sourced from the Methods section, pg 1420 and 1421\n#\n\n# initialize reference object\nrefvalues <- list()\n\n# standard 30-sec epoch definition\nrefvalues$epoch_interval_s <- 30\n\n# day-level initial screening criteria\nrefvalues$min_GPS_data_day <- 5\nrefvalues$min_traveldiary_day <- 6\nrefvalues$min_accel_day <- 6\n\n# minimum complete days of data (accelerometry)\nrefvalues$min_accel_wearing_hr <- 8\nrefvalues$min_conseczero_m <- 20\n\n# minimum walking bout (accelerometry)\nrefvalues$min_walking_bout_m <- 5\n\n# minimum physical activity bout (accelerometry)\n# need definition of lower-intensity PA and moderate-intensity PA\nrefvalues$min_pa_cpe <- 500 # defined as \"slow walking\" or light-intensity PA with avg speed of 3 km/hr\nrefvalues$max_light_moderate_pa_cpe <- 2863 # >2863 cpe would be non-walking. 2874 cpe? 3360 cpe?\nrefvalues$min_pa_window_m <- 7\nrefvalues$max_pa_break_m <- 2\n\n# GPS data criteria\nrefvalues$min_gps_coverage_ratio <- .2\nrefvalues$min_gps_consec_obs <- 5\nrefvalues$min_gps_window_m <- 2.5\nrefvalues$min_gps_walking_speed_km_h <- 2\nrefvalues$max_gps_walking_speed_km_h <- 6\n\n\n# GPS speeds\n  # walking bout\n  # non-walking bout\n    # dwell algorithm (location relationship)\n    #1) calculating the sum of distances from each point to all other points within the bout,\n    #2) by selecting points having a sum distance below the 95th percentile\n    # of the sum distances of all points in the bout, \n    #3) by generating a minimum bounding circle fully containing the selected points, and \n    #4) by obtaining the circle’s radius. Bouts with radii <=66 ft were considered as dwell bouts\n\n# dwell radii\nrefvalues$max_dwellbout_radii_ft <- 66\nrefvalues$min_dwellbout_obs <- 10\n\nrefvalues$time_zone=\"America/Los_Angeles\"\n\n    # conversion to seconds, if possible\n    refvalues_s <- list()\n    refvalues_s$epoch_interval_s <- refvalues$epoch_interval_s\n    \n    refvalues_s$min_GPS_data_s <- refvalues$min_GPS_data_day*24*60*60\n    refvalues_s$min_traveldiary_s <- refvalues$min_traveldiary_day*24*60*60\n    refvalues_s$min_accel_s <- refvalues$min_accel_day*24*60*60\n    \n    refvalues_s$min_accel_wearing_s <- refvalues$min_accel_wearing_hr*60*60\n    refvalues_s$min_conseczero_s <- refvalues$min_conseczero_m*60\n    refvalues_s$min_walking_bout_s <- refvalues$min_walking_bout_m*60\n    \n    refvalues_s$min_pa_cpe <- refvalues$min_pa_cpe\n    refvalues_s$max_light_moderate_pa_cpe <- refvalues$max_light_moderate_pa_cpe \n    refvalues_s$min_pa_window_s <- refvalues$min_pa_window_m*60\n    refvalues_s$max_pa_break_s <- refvalues$max_pa_break_m*60\n\n    refvalues_s$min_gps_coverage_ratio <- refvalues$min_gps_coverage_ratio\n    refvalues_s$min_gps_consec_obs <- refvalues$min_gps_consec_obs\n    refvalues_s$min_gps_window_s <- refvalues$min_gps_window_m*60\n\n    refvalues_s$min_dwellbout_radii_meters <- refvalues$min_dwellbout_radii_ft*3.281 ##?? Meters?\n    refvalues_s$max_dwellbout_radii_ft <- refvalues$max_dwellbout_radii_ft\n    refvalues_s$min_dwellbout_obs <- refvalues$min_dwellbout_obs\n    \n    refvalues_s$min_gps_walking_speed_km_h <- 2\n    refvalues_s$max_gps_walking_speed_km_h <- 6\n    \n    refvalues_s$time_zone=\"America/Los_Angeles\"\n",
+    "created" : 1644461174734.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2309214718",
+    "id" : "1C6CCF68",
+    "lastKnownWriteTime" : 1632269310,
+    "last_content_update" : 1632269310,
+    "path" : "~/Desktop/retrieved_backup/epiProject/walk_bout/walk_bout_v0.0.2/make_package/rwalkabout/R/Kang 2013 - thresholds.R",
+    "project_path" : "R/Kang 2013 - thresholds.R",
+    "properties" : {
+    },
+    "relative_order" : 8,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "Package: rwalkabout\nType: Package\nTitle: Generate walk bout information from accelerometry and GPS data.\nVersion: 0.0.2\nAuthor: Weipeng Zhou, Steve Mooney\nMaintainer: Weipeng Zhou <wzhou87@uw.edu>\nDescription: First matches accelerometry and GPS for each subject.\n    Then create bouts from accelerometry data. Then filter out bouts\n    with insufficient GPS record counts.\nLicense: GPL\nEncoding: UTF-8\nLazyData: true\nImports:\n    testthat, tidyverse\nRoxygenNote: 7.1.2\n",
+    "created" : 1644454435227.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3605179862",
+    "id" : "A1965353",
+    "lastKnownWriteTime" : 1644460484,
+    "last_content_update" : 1644460484134,
+    "path" : "~/Desktop/retrieved_backup/epiProject/walk_bout/walk_bout_v0.0.2/make_package/rwalkabout/DESCRIPTION",
+    "project_path" : "DESCRIPTION",
+    "properties" : {
+        "marks" : "<:0,0\n>:0,0"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "dcf"
+}
