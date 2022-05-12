@@ -1,18 +1,30 @@
-## walk about
-identify walk bouts using GPS and accelerometry data
+## rwalkabout
+`rwalkbout` aims to streamline the identification of walk bouts from accelerometry and gps data.
 
-### set up
-set working directory to be `walkabout/R`
-run `R/example.R`
+### Set up
+Set working directory to be `rwalkabout/R`.
 
-#### file reader (ACC, GPS)
-Ensure that date_time returned by both readers are in the same time zone
+Edit and run `R/analysis/analyze_all_subject_seattle.R`.
 
-##### acc reader
+### Customize rwalkbout to your dataset
+`rwalkbout` can be configured to any gps and accelerometry (acc) data, as long as you write the respective acc/gps file reader. 
+
+The reader should be a function that reads the data and return to `rwalkbout` with a predefined format.
+
+Below outlines what inputs `rwalkbout` will give to the function and what returned format `rwalkbout` expects.
+
+Note: ensure that date_time returned by both readers are in the same time zone
+
+##### file reader for acc data
+Inputs:
 accepts a parameter `acc_file_path`
+
+Outputs:
 returns a dataframe with columns `date_time,count`
 cast to tibble with `as.tibble()`
-collapse/interpolate to make epoch period=30s
+collapse/interpolate to make epoch period=15s
+
+Example outputs and data types:
 
 ``` output data types
 > acc_data$date_time[1]
@@ -26,11 +38,15 @@ collapse/interpolate to make epoch period=30s
 [1] "numeric"
 ```
 
-##### gps reader
+##### file reader for gps data
+Inputs:
 accepts a parameter `gps_file_path`
+
+Outputs:
 returns a dataframe with columns `date_time,latitude,longitude,speed`, latitude and longitude should be positive/negative based its N/S, W/E
 cast to tibble with `as.tibble()`
 
+Example outputs and data types:
 ```data type
 > class(gps_data$date_time[1])
 [1] "POSIXct" "POSIXt" 
@@ -53,11 +69,7 @@ cast to tibble with `as.tibble()`
 [1] 0.590584
 ```
 
-#### subject file mapper
-This tells the program which ACC and which GPS files are from the same subject.
+##### acc and gps file mapper
+Optionally users can create a function that returns the mapping between acc and gps files. Examples are shown in `rwalkbout/R/subject_file_mapper.R`.
 
-runs and returns a dataframe with columns `subject_id,acc_file_path,gps_file_path,`
-
-### known issue
-Failure with subject 100006. This subject's duration contains the daylight saving day. 
-All accelerometry data contains 24 hours. And this becomes a problem when converting the time to UTC on the daylight saving day. NA was created and error occurs.
+`rwalkbout` does not require it for running. It is just a nice thing to do when dealing with folders of files and subjects.
