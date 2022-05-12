@@ -17,11 +17,15 @@ Note: ensure that date_time returned by both readers are in the same time zone
 
 #### File reader for acc data
 Inputs:
+
 accepts a parameter `acc_file_path`
 
 Outputs:
+
 returns a dataframe with columns `date_time,count`
+
 cast to tibble with `as.tibble()`
+
 collapse/interpolate to make epoch period=15s
 
 Example outputs and data types:
@@ -40,10 +44,13 @@ Example outputs and data types:
 
 #### File reader for gps data
 Inputs:
+
 accepts a parameter `gps_file_path`
 
 Outputs:
+
 returns a dataframe with columns `date_time,latitude,longitude,speed`, latitude and longitude should be positive/negative based its N/S, W/E
+
 cast to tibble with `as.tibble()`
 
 Example outputs and data types:
