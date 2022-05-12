@@ -1,30 +1,32 @@
 # this pipeline is for processing one subject's data only
-process_one_subject <- function (acc_file_path, gps_file_path) {
+process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, acc_file_reader=NULL, gps_file_reader=NULL) {
+  expect_false(is.null(acc_file_reader))
+  expect_false(is.null(gps_file_reader))
+  expect_false(is.null(time_zone), "Must provide a time zone for proper handling of accelerometry data")
 
   #' Stage I: Accelerometry data processing
-  # 1. read in the data table (accelerometry)
-  data1 <- data.table(read.csv(acc_file_path, skip = 10, stringsAsFactors = FALSE))
+  # 1. read acc data
+  acc_data <- acc_file_reader(acc_file_path = acc_file_path)
 
-  # 2. fix date-time datatypes and assign epoch start times
-  # generate data read epochs
-  data1 <- data1 %>%
-    fix_date_time(., date_field="Date", time_field="Time", date_format="%m/%d/%Y", time_format="%H:%M:%S") %>% # generates a field called DateTime
-    rename(LocalTime=DateTIME) %>% # refer to DateTime as the LocalTime; weipeng edit
+  # 2.1 assign epoch start times and generate data read epochs
+  data1 <- acc_data %>%
+    data.table() %>%
+    rename(LocalTime=date_time, Axis1=count) %>%
+    data.table() %>%
     rowwise() %>%
-    mutate(epoch_time = find_epoch_start(reference_datetime=LocalTime, epoch_inc=refvalues_s$epoch_interval_s, time_zone = 'America/Los_Angeles')) %>%
-    data.table()
+    mutate(epoch_time = find_epoch_start(reference_datetime=LocalTime, epoch_inc=30, time_zone=time_zone))
 
   # 3. classify activity epochs by that are axis1 sums over 500 cpe
   # Create Axis1 sums for each 30 second epoch
   # create threshold indicator for counts/30s epoch > 500
   data1 <- data1 %>%
     generate_sum_by_epoch(., epoch_field='epoch_time', epoch_inc=30, sum_field='Axis1') %>%
-    classify_accelerometry_activity(., epoch_field='epoch_time',  cpe_field='Axis1_30_epochSum',  minimum_cpe=refvalues$min_pa_cpe)
+    classify_accelerometry_activity(., epoch_field='epoch_time',  cpe_field='Axis1_epochSum',  minimum_cpe=refvalues$min_pa_cpe)
 
   # 4. Summarize into epoch
   # summarize into epoch scales
   epoch_series <- data1 %>%
-    select(epoch_time, Axis1_30_epochSum, Activity) %>%
+    select(epoch_time, Axis1_epochSum, Activity) %>%
     .[!duplicated(.)]
 
   epoch_rle_df <- summarize_epoch_activity(df=epoch_series, activity_field='Activity', epoch_inc=30)
@@ -48,6 +50,12 @@ process_one_subject <- function (acc_file_path, gps_file_path) {
                       low_intense_threshold = refvalues_s$max_pa_break_s)
 
   # 7. transfer the physical activity bout labels to the epoch_series, time_series
+  if (!('bout_label' %in% colnames(epoch_rle_df))) {
+    message("This subject has no physically active bouts, returning result of zero row")
+    tbl_colnames <- c('bout_label','NonWalk1_ACC','NonWalk2_GPS','Walk1_GPS','n_epochs','min_accel_count','mean_accel_count','max_accel_count','complete_days','sufficient_GPS_coverage','dwell_bouts','median_speed','bout_start_date','bout_start_time','bout_end_date','bout_end_time', 'This subject has no physically active bouts, returning result of zero row')
+    empty_df <- read_csv("\n", col_names = tbl_colnames)
+    return(empty_df)
+  }
 
   # extract the bout labels
   epoch_series <- propagate_bout_labels(rle_df=epoch_rle_df, epoch_series=epoch_series, bout_field='bout_label')
@@ -65,7 +73,7 @@ process_one_subject <- function (acc_file_path, gps_file_path) {
   # identify complete days
   epoch_date_summ <- compute_complete_days(epoch_series=epoch_series,
                                           epoch_inc=30,
-                                          min_wearings_hours_per_day=8,
+                                          min_wearings_hours_per_day=refvalues$min_accel_wearing_hr,
                                           nonwearing_field='Nonwearing',
                                           epoch_datetime_field='epoch_time')
 
@@ -75,17 +83,15 @@ process_one_subject <- function (acc_file_path, gps_file_path) {
     merge(epoch_date_summ, by='epoch_date', all=T)
 
   #' Stage II: GPS data processing
-  # 1. read in the corresponding GPS file to identify walk bouts
-  data2 <- read.csv(gps_file_path, stringsAsFactors = FALSE)
+  # 1. read in the corresponding GPS file
+  gps_data <- gps_file_reader(gps_file_path=gps_file_path)
 
   # 2. fix and generate local.datetime and utc.datetime
-  data2 <- data2 %>%
-    fix_date_time(., date_field="LOCAL.DATE", time_field="LOCAL.TIME", date_format="%Y/%m/%d", time_format="%H:%M:%S") %>% # generates a field called DateTime
-    fix_date_time(., date_field="UTC.DATE", time_field="UTC.TIME", date_format="%Y/%m/%d", time_format="%H:%M:%S") %>% # generates a field called DateTime
-    correction_for_cardinality(gps_data=., coordinate_field='LATITUDE', cardinality_field='N.S') %>%
-    correction_for_cardinality(gps_data=., coordinate_field='LONGITUDE', cardinality_field='E.W') %>%
+  data2 <- gps_data %>%
+    data.table() %>%
+    rename(LOCAL.DATETIME=date_time, LATITUDE=latitude, LONGITUDE=longitude, SPEED=speed) %>%
     rowwise() %>%
-    mutate(epoch_time = find_epoch_start(reference_datetime=LOCAL.DATETIME, epoch_inc=refvalues_s$epoch_interval_s)) %>% # identify epochs
+    mutate(epoch_time = find_epoch_start(reference_datetime=LOCAL.DATETIME, epoch_inc=30, time_zone=time_zone)) %>% # identify epochs
     data.table()
 
   # 3. full outer join of the Accelerometry data and GPS data
@@ -93,7 +99,6 @@ process_one_subject <- function (acc_file_path, gps_file_path) {
     merge(epoch_series, by='epoch_time', all=TRUE) %>%
     mutate(bout_label = ifelse(!is.na(bout_label), bout_label, NaN)) %>%
     arrange(epoch_time, LOCAL.DATETIME)
-
 
   # 4. summarize the distribution of speeds observed during physical activity bout periods
   gps_dq <- gps_acc %>%
@@ -121,9 +126,8 @@ process_one_subject <- function (acc_file_path, gps_file_path) {
     # data quality metrics
     GPS_coverage_ratio = ifelse(n_bout_records!=0, n_valid_GPS_records/n_bout_records, NaN),
     speed_coverage_ratio = ifelse(n_bout_records!=0, n_speed_records/n_bout_records, NaN),
-    sufficient_GPS_records = n_valid_GPS_records>5,
-    sufficient_GPS_coverage = GPS_coverage_ratio>refvalues$min_gps_coverage_ratio) %>%
-    data.table()
+    sufficient_GPS_records = n_valid_GPS_records>refvalues$min_gps_obs_within_bout,
+    sufficient_GPS_coverage = GPS_coverage_ratio>refvalues$min_gps_coverage_ratio)
 
   # unique bouts
   bouts <- gps_acc %>% filter(!is.na(bout_label)) %>% .$bout_label %>% unique()
@@ -148,7 +152,7 @@ process_one_subject <- function (acc_file_path, gps_file_path) {
       spDists(., longlat = TRUE) # kilometers
 
     sumDist <- Distances %>% colSums() # 7. calculate sum of distance for each point
-    thresh <- quantile(sumDist, c(0.95))
+    thresh <- quantile(sumDist, c(refvalues$dwellbout_radii_quantile))
     KeepPoints <- sumDist < thresh[[1]][1] # 8. identify points below the 95% percentile of sum of distances
 
     # 9. identify the radius of the bounding circle containing the selected points
@@ -172,7 +176,7 @@ process_one_subject <- function (acc_file_path, gps_file_path) {
 
   if (!("dwell_bout" %in% colnames(gps_acc)) && sum(gps_acc$incomplete_GPS[!is.na(gps_acc$incomplete_GPS)] != 1) == 0) {  # no dwell bout at all due to incomplete GPS for all bouts
     message("This subject's all bouts have incomplete GPS coverage, returning result of zero row")
-    tbl_colnames <- c('bout_label','NonWalk1_ACC','NonWalk2_GPS','Walk1_GPS','n_epochs','min_accel_count','mean_accel_count','max_accel_count','complete_days','sufficient_GPS_coverage','dwell_bouts','median_speed','bout_start_date','bout_start_time','bout_end_date','bout_end_time')
+    tbl_colnames <- c('bout_label','NonWalk1_ACC','NonWalk2_GPS','Walk1_GPS','n_epochs','min_accel_count','mean_accel_count','max_accel_count','complete_days','sufficient_GPS_coverage','dwell_bouts','median_speed','bout_start_date','bout_start_time','bout_end_date','bout_end_time', "This subject's all bouts have incomplete GPS coverage, returning result of zero row")
     empty_df <- read_csv("\n", col_names = tbl_colnames)
     return(empty_df)
   }
@@ -189,9 +193,9 @@ process_one_subject <- function (acc_file_path, gps_file_path) {
   epoch_summary <- epoch_summary %>%
     group_by(bout_label) %>%
     mutate(
-      min_accel_count = min(Axis1_30_epochSum, na.rm = T),
-      mean_accel_count = mean(Axis1_30_epochSum, na.rm = T),
-      max_accel_count = max(Axis1_30_epochSum, na.rm = T),
+      min_accel_count = min(Axis1_epochSum, na.rm = T),
+      mean_accel_count = mean(Axis1_epochSum, na.rm = T),
+      max_accel_count = max(Axis1_epochSum, na.rm = T),
       NonWalk1_ACC = case_when(mean_accel_count>=refvalues_s$max_light_moderate_pa_cpe ~1), # too fast; running/driving
       NonWalk2_GPS = case_when((complete_days==T & dwell_bouts==1) | # dwell-bout
                                  (complete_days==T & dwell_bouts==0 &

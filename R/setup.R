@@ -12,14 +12,15 @@ if (!require(measurements)) install.packages('measurements')
 if (!require(latticeExtra)) install.packages('latticeExtra')
 if (!require(testthat)) install.packages('testthat')
 
-# source("Bout-Function.R")
-# source("GPS-Function.R")
-# source("Kang 2013 - thresholds.R")
-# source("metadata_extraction.R") # metadata extraction
-# source("define_epochs.R") # assign time-series epochs
-# source("define_physical_activity_bouts.R") # extract accelerometry activity
-# source("define_GPS_features.R") # extract GPS activity
-# source("process_one_subject.R") # get bout summary info from one subject's accelerometry and GPS data
-# source("process_many_subject.R") # a loop version of process_one_subject.R
-#
+source("walkbout_config.R")
+source("metadata_file_mapping.R") # metadata extraction
+source("subject_file_mapper.R")
+source("acc_file_reader.R")
+source("gps_file_reader.R")
+source("process_acc.R")
+source("process_acc.R")
+source("process_gps.R")
+source("process_one_subject.R") # get bout summary info from one subject's accelerometry and GPS data
+source("process_many_subject.R") # a loop version of process_one_subject.R
+
 
