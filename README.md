@@ -15,7 +15,7 @@ Below outlines what inputs `rwalkbout` will give to the function and what return
 
 Note: ensure that date_time returned by both readers are in the same time zone
 
-##### file reader for acc data
+#### File reader for acc data
 Inputs:
 accepts a parameter `acc_file_path`
 
@@ -38,7 +38,7 @@ Example outputs and data types:
 [1] "numeric"
 ```
 
-##### file reader for gps data
+#### File reader for gps data
 Inputs:
 accepts a parameter `gps_file_path`
 
@@ -69,7 +69,7 @@ Example outputs and data types:
 [1] 0.590584
 ```
 
-##### acc and gps file mapper
+#### acc and gps file mapper
 Optionally users can create a function that returns the mapping between acc and gps files. Examples are shown in `rwalkbout/R/subject_file_mapper.R`.
 
 `rwalkbout` does not require it for running. It is just a nice thing to do when dealing with folders of files and subjects.
