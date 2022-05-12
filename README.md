@@ -4,7 +4,7 @@
 ### Set up
 Set working directory to be `rwalkabout/R`.
 
-Edit and run `R/analysis/analyze_all_subject_seattle.R`.
+Edit and run `rwalkabout/analysis/analyze_all_subject_seattle.R`.
 
 ### Customize rwalkbout to your dataset
 `rwalkbout` can be configured to any gps and accelerometry (acc) data, as long as you write the respective acc/gps file reader. 
