@@ -70,6 +70,8 @@ seattle_baseline_1_file_mapper <- function (acc_folder_path='/Users/wzhou87/Desk
   print(sprintf("Number of ACC subjects with no GPS mapping: %d", nrow(acc_unmatched_df)))
   print(sprintf("Number of GPS subjects with no ACC mapping: %d", nrow(gps_unmatched_df)))
   print(sprintf("Number of matched subjects: %d", nrow(valid_subject_file_mapping_df)))
+  # moving this from main script to happen within this function [LBW 11/12: not sure why this is needed, to do: investigate]
+  valid_subject_file_mapping_df <- valid_subject_file_mapping_df[!(valid_subject_file_mapping_df$subject_id %in% c("13421835_baseline_1", "12915257_baseline_1")), ]
 
   return(valid_subject_file_mapping_df)
 }

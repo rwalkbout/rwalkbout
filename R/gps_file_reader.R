@@ -50,8 +50,5 @@ seattle_baseline_1_gps_file_reader <- function (gps_file_path) {
   ## drop na rows (e.g. 3703 row of ~/Desktop/retrieved_backup/epiProject/walk_bout/data/trac/gps/gps_12015817_baseline_1.csv)
   gps_data <- drop_na(gps_data)
 
-  # moving this from main script to happen within this function [LBW 11/12: not sure why this is needed, to do: investigate]
-  gps_data <- gps_data[!(gps_data$subject_id %in% c("13421835_baseline_1", "12915257_baseline_1")), ]
-
   return(gps_data)
 }
