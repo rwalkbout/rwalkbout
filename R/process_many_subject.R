@@ -12,14 +12,18 @@ process_many_subject <- function (vector_of_acc_file_path=NULL, vector_of_gps_fi
   list_of_processed_result <- list()
   failed_subjects <- c()
   failed_messages <- c()
-  for (i in seq_along(vector_of_acc_file_path)) {
+for (i in seq_along(vector_of_acc_file_path)) {
     acc_file_path <- vector_of_acc_file_path[i]
     gps_file_path <- vector_of_gps_file_path[i]
     subject_id <- vector_of_subject_id[i]
     print(paste("Processing", vector_of_acc_file_path[i], vector_of_gps_file_path[i]))
     print(paste("Progress:", i, "of", length(vector_of_acc_file_path), "acc/gps pairs"))
 
-    processed_result <- process_one_subject(acc_file_path = acc_file_path, gps_file_path = gps_file_path, acc_file_reader = acc_file_reader, gps_file_reader = gps_file_reader, time_zone = time_zone)
+    processed_result <- process_one_subject(acc_file_path = acc_file_path,
+                                            gps_file_path = gps_file_path,
+                                            acc_file_reader = acc_file_reader,
+                                            gps_file_reader = gps_file_reader,
+                                            time_zone = time_zone)
     if (nrow(processed_result) == 0) {
       failed_subjects <- c(failed_subjects, subject_id)
       failed_messages <- c(failed_messages, colnames(processed_result)[ncol(processed_result)])
@@ -32,7 +36,8 @@ process_many_subject <- function (vector_of_acc_file_path=NULL, vector_of_gps_fi
     list_of_processed_result[[i]] <- processed_result
   }
 
-  print(tibble('failed_subject'=failed_subjects, 'message'=failed_messages) %>% arrange(message))
+
+  if(length(failed_subjects)>0){print(tibble('failed_subject'=failed_subjects, 'message'=failed_messages) %>% arrange(message))}
 
   # rbind and return
   summary_table <- do.call(rbind, list_of_processed_result)
@@ -109,3 +114,4 @@ get_paths <- function (accelerometry_phase2, gps_phase2) {
 
   return(path_all)
 }
+
