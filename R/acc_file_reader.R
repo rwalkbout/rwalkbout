@@ -43,5 +43,7 @@ seattle_baseline_1_acc_file_reader <- function (acc_file_path) {
   interpolated_date_time_column <- seq(from=start_date_time, length.out = num_time_stamp*2, by = epoch_period/2, tz=time_zone)
   acc_data <- tibble(date_time = interpolated_date_time_column, count = interpolated_count)
 
+  acc_data <- as.data.table(acc_data)
+
   return(acc_data)
 }

@@ -14,13 +14,12 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
 
   # 2.1 assign epoch start times and generate data read epochs
   data1 <- acc_data %>%
-    data.table() %>%
-    rename(LocalTime=date_time, Axis1=count) %>%
-    data.table() %>%
-    rowwise() %>%
-    mutate(epoch_time = find_epoch_start(reference_datetime=LocalTime, epoch_inc=30, time_zone=time_zone))
+    rename(LocalTime=date_time, Axis1=count)
+  epoch_time <- min(acc_data$date_time) + floor((acc_data$date_time - min(acc_data$date_time)) / 30) * 30
+  data1$epoch_time <- format(epoch_time, format='%Y-%m-%d %H:%M:%S', tz=time_zone, usetz=TRUE)
+  data1 <- tibble(data1)
   epoch_done = proc.time()
-  message(paste0('epoch start times assigned in', round((epoch_done - acc_done)[3], 2), ' s\n'))
+  message(paste0('epoch start times processed in', round((epoch_done - acc_done)[3], 2), ' s\n'))
 
 
   # 3. classify activity epochs by that are axis1 sums over 500 cpe

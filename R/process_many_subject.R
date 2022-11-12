@@ -14,6 +14,7 @@ process_many_subject <- function (vector_of_acc_file_path=NULL, vector_of_gps_fi
   list_of_processed_result <- list()
   failed_subjects <- c()
   failed_messages <- c()
+  i <- 1
   for (i in seq_along(vector_of_acc_file_path)) {
       acc_file_path <- vector_of_acc_file_path[i]
       gps_file_path <- vector_of_gps_file_path[i]
