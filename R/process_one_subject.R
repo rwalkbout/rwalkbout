@@ -1,5 +1,7 @@
 # this pipeline is for processing one subject's data only
 process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, acc_file_reader=NULL, gps_file_reader=NULL) {
+  start = proc.time()
+
   expect_false(is.null(acc_file_reader))
   expect_false(is.null(gps_file_reader))
   expect_false(is.null(time_zone), "Must provide a time zone for proper handling of accelerometry data")
@@ -7,6 +9,8 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
   #' Stage I: Accelerometry data processing
   # 1. read acc data
   acc_data <- acc_file_reader(acc_file_path = acc_file_path)
+  acc_done = proc.time()
+  message(paste0('acc_data processed in', round((acc_done - start)[3], 2), ' s\n'))
 
   # 2.1 assign epoch start times and generate data read epochs
   data1 <- acc_data %>%
@@ -15,6 +19,9 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
     data.table() %>%
     rowwise() %>%
     mutate(epoch_time = find_epoch_start(reference_datetime=LocalTime, epoch_inc=30, time_zone=time_zone))
+  epoch_done = proc.time()
+  message(paste0('epoch start times assigned in', round((epoch_done - acc_done)[3], 2), ' s\n'))
+
 
   # 3. classify activity epochs by that are axis1 sums over 500 cpe
   # Create Axis1 sums for each 30 second epoch
@@ -22,14 +29,18 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
   data1 <- data1 %>%
     generate_sum_by_epoch(., epoch_field='epoch_time', epoch_inc=30, sum_field='Axis1') %>%
     classify_accelerometry_activity(., epoch_field='epoch_time',  cpe_field='Axis1_epochSum',  minimum_cpe=refvalues$min_pa_cpe)
+  class_done = proc.time()
+  message(paste0('activity epochs classified in ', round((class_done - epoch_done)[3], 2), ' s\n'))
 
   # 4. Summarize into epoch
-  # summarize into epoch scales
+  # summarize into epoch scalesacc_done = proc.time()
   epoch_series <- data1 %>%
     select(epoch_time, Axis1_epochSum, Activity) %>%
     .[!duplicated(.)]
 
   epoch_rle_df <- summarize_epoch_activity(df=epoch_series, activity_field='Activity', epoch_inc=30)
+  summarize_done = proc.time()
+  message(paste0('summarization done in ', round((summarize_done - class_done)[3], 2), ' s\n'))
 
   # 5. identify nonwearing periods
   # over 20 min consecutive zero activity per epoch
@@ -48,6 +59,8 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
                       accelerometry_complete_days = refvalues_s$min_accel_wearing_s,
                       min_accelerometry_window = refvalues_s$min_pa_window_s,
                       low_intense_threshold = refvalues_s$max_pa_break_s)
+  label_done = proc.time()
+  message(paste0('label generation done in ', round((label_done - summarize_done)[3], 2), ' s\n'))
 
   # 7. transfer the physical activity bout labels to the epoch_series, time_series
   if (!('bout_label' %in% colnames(epoch_rle_df))) {
@@ -244,5 +257,10 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
 
   summary_with_start_end_date <- inner_join(bout_start, bout_end, by=c( "bout_label", "NonWalk1_ACC", "NonWalk2_GPS", "Walk1_GPS", "n_epochs", "min_accel_count", "mean_accel_count", "max_accel_count", "complete_days", "sufficient_GPS_coverage", "dwell_bouts", "median_speed" ))
   #summary_with_start_end_date <- summary_with_start_end_date %>% select(-c(bout_label, sufficient_GPS_coverage, bout_start_date, bout_end_date, complete_days))
+  other_done = proc.time()
+  message(paste0('other done in ', round((other_done - label_done)[3], 2), ' s\n'))
+
+
+
   return(summary_with_start_end_date)
 }
