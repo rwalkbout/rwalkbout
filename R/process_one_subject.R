@@ -8,36 +8,13 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
 
   #' Stage I: Accelerometry data processing
   # 1. read acc data
-  acc_data <- acc_file_reader(acc_file_path = acc_file_path)
+  epoch_series <- acc_file_reader(acc_file_path = acc_file_path)
   acc_done = proc.time()
   message(paste0('acc_data processed in', round((acc_done - start)[3], 2), ' s\n'))
 
-  # 2.1 assign epoch start times and generate data read epochs
-  data1 <- acc_data %>%
-    rename(LocalTime=date_time, Axis1=count)
-  epoch_time <- min(acc_data$date_time) + floor((acc_data$date_time - min(acc_data$date_time)) / 30) * 30
-  data1$epoch_time <- format(epoch_time, format='%Y-%m-%d %H:%M:%S', tz=time_zone, usetz=TRUE)
-  data1 <- tibble(data1)
-  epoch_done = proc.time()
-  message(paste0('epoch start times processed in', round((epoch_done - acc_done)[3], 2), ' s\n'))
-
-
-  # 3. classify activity epochs by that are axis1 sums over 500 cpe
-  # Create Axis1 sums for each 30 second epoch
-  # create threshold indicator for counts/30s epoch > 500
-  data1 <- data1 %>% classify_accelerometry_activity(., epoch_field='epoch_time',  cpe_field='Axis1_epochSum',  minimum_cpe=refvalues$min_pa_cpe)
-  class_done = proc.time()
-  message(paste0('activity epochs part 2 classified in ', round((class_done - epoch_done)[3], 2), ' s\n'))
-
-  # 4. Summarize into epoch
-  # summarize into epoch scalesacc_done = proc.time()
-  epoch_series <- data1 %>%
-    select(epoch_time, Axis1_epochSum, Activity) %>%
-    .[!duplicated(.)]
-
   epoch_rle_df <- summarize_epoch_activity(df=epoch_series, activity_field='Activity', epoch_inc=30)
   summarize_done = proc.time()
-  message(paste0('summarization done in ', round((summarize_done - class_done)[3], 2), ' s\n'))
+  message(paste0('summarization done in ', round((summarize_done - acc_done)[3], 2), ' s\n'))
 
   # 5. identify nonwearing periods
   # over 20 min consecutive zero activity per epoch
@@ -53,7 +30,9 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
 
   epoch_rle_df <- epoch_rle_df %>%
     identify_pa_bouts(df=.,
-                      activity_field='Activity', activity_values=c('Active'), nonactivity_values= c('Low active','Non_active'),
+                      activity_field='Activity',
+                      activity_values=c('Active'),
+                      nonactivity_values= c('Low active','Non_active'),
                       duration_field='duration',
                       bout_field='bout_label',
                       epoch_inc=30,

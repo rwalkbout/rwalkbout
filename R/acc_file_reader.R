@@ -32,22 +32,15 @@ seattle_baseline_1_acc_file_reader <- function (acc_file_path) {
   num_time_stamp <- nrow(count_df)
   date_time_column <- seq(from=start_date_time, length.out = num_time_stamp, by = epoch_period, tz=time_zone)
 
-  ## put together date_time and count
-  acc_data <- count_df %>% add_column(date_time = date_time_column, .before = 1)
-
-  ## interpolate 30 epoch period to 15 epoch period
-  interpolated_count <- numeric(2*length(count_df$count))
-  interpolated_count[c(TRUE, FALSE)] = floor(count_df$count/2)
-  interpolated_count[c(FALSE, TRUE)] = ceiling(count_df$count/2)
-
-  shortcut_count <- numeric(2*length(count_df$count))
-  shortcut_count[c(TRUE, FALSE)] <- floor(count_df$count/2) + ceiling(count_df$count/2)
-  shortcut_count[c(FALSE, TRUE)] <- floor(count_df$count/2) + ceiling(count_df$count/2)
-
-  interpolated_date_time_column <- seq(from=start_date_time, length.out = num_time_stamp*2, by = epoch_period/2, tz=time_zone)
-  acc_data <- tibble(date_time = interpolated_date_time_column, count = interpolated_count, Axis1_epochSum = shortcut_count)
-
+  acc_data <- tibble(
+    epoch_time = format(date_time_column, format='%Y-%m-%d %H:%M:%S', tz=time_zone, usetz=TRUE),
+    Axis1_epochSum = count_df$count,
+    Activity = 'Low active'
+  )
   acc_data <- as.data.table(acc_data)
+  acc_data <- acc_data[Axis1_epochSum==0, Activity := 'Non_active']
+  acc_data <- acc_data[Axis1_epochSum > refvalues$min_pa_cpe, Activity := 'Active']
+  acc_data$Activity <- as.factor(acc_data$Activity)
 
   return(acc_data)
 }
