@@ -16,10 +16,7 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
   summarize_done = proc.time()
   message(paste0('summarization done in ', round((summarize_done - acc_done)[3], 2), ' s\n'))
 
-  # 5. identify nonwearing periods
-  # over 20 min consecutive zero activity per epoch
-
-  # 6. identify tolerable breaks as part of a physical activity bout
+  # 5-6. identify bouts and bout durations
   # identify activity that is "within 2-min tolerance of low activity"
 
   # generate the bout labels
