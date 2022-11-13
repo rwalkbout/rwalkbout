@@ -12,17 +12,17 @@ result_save_folder <- "~/walkbout_results/test/trac" # TO DO: Make results direc
 # pull file paths:
 file_mapper_result <- seattle_baseline_1_file_mapper(acc_folder_path=acc_folder_path, gps_folder_path=gps_folder_path)
 # for testing:
-# subject_subset <- c()
+subject_subset <- c()
 subject_subset <- c("10100052_baseline_1", "14832802_baseline_1")
 if(length(subject_subset)>0){file_mapper_result <- file_mapper_result[file_mapper_result$subject_id %in% subject_subset,]}
 
-vector_of_acc_file_path = file_mapper_result$acc_file_path
-vector_of_gps_file_path = file_mapper_result$gps_file_path
-vector_of_subject_id = file_mapper_result$subject_id
-acc_file_reader = seattle_baseline_1_acc_file_reader
-gps_file_reader = seattle_baseline_1_gps_file_reader
-result_save_folder=result_save_folder
-time_zone=time_zone
+# vector_of_acc_file_path = file_mapper_result$acc_file_path
+# vector_of_gps_file_path = file_mapper_result$gps_file_path
+# vector_of_subject_id = file_mapper_result$subject_id
+# acc_file_reader = seattle_baseline_1_acc_file_reader
+# gps_file_reader = seattle_baseline_1_gps_file_reader
+# result_save_folder=result_save_folder
+# time_zone=time_zone
 
 
 # run walkbout code:

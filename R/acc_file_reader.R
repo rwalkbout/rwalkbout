@@ -40,8 +40,12 @@ seattle_baseline_1_acc_file_reader <- function (acc_file_path) {
   interpolated_count[c(TRUE, FALSE)] = floor(count_df$count/2)
   interpolated_count[c(FALSE, TRUE)] = ceiling(count_df$count/2)
 
+  shortcut_count <- numeric(2*length(count_df$count))
+  shortcut_count[c(TRUE, FALSE)] <- floor(count_df$count/2) + ceiling(count_df$count/2)
+  shortcut_count[c(FALSE, TRUE)] <- floor(count_df$count/2) + ceiling(count_df$count/2)
+
   interpolated_date_time_column <- seq(from=start_date_time, length.out = num_time_stamp*2, by = epoch_period/2, tz=time_zone)
-  acc_data <- tibble(date_time = interpolated_date_time_column, count = interpolated_count)
+  acc_data <- tibble(date_time = interpolated_date_time_column, count = interpolated_count, Axis1_epochSum = shortcut_count)
 
   acc_data <- as.data.table(acc_data)
 

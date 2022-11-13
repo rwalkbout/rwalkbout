@@ -25,11 +25,9 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
   # 3. classify activity epochs by that are axis1 sums over 500 cpe
   # Create Axis1 sums for each 30 second epoch
   # create threshold indicator for counts/30s epoch > 500
-  data1 <- data1 %>%
-    generate_sum_by_epoch(., epoch_field='epoch_time', epoch_inc=30, sum_field='Axis1') %>%
-    classify_accelerometry_activity(., epoch_field='epoch_time',  cpe_field='Axis1_epochSum',  minimum_cpe=refvalues$min_pa_cpe)
+  data1 <- data1 %>% classify_accelerometry_activity(., epoch_field='epoch_time',  cpe_field='Axis1_epochSum',  minimum_cpe=refvalues$min_pa_cpe)
   class_done = proc.time()
-  message(paste0('activity epochs classified in ', round((class_done - epoch_done)[3], 2), ' s\n'))
+  message(paste0('activity epochs part 2 classified in ', round((class_done - epoch_done)[3], 2), ' s\n'))
 
   # 4. Summarize into epoch
   # summarize into epoch scalesacc_done = proc.time()
@@ -49,7 +47,11 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
 
   # generate the bout labels
   epoch_rle_df <- epoch_rle_df %>%
-    identify_nonwearing_periods(., activity_field='Activity', activity_value='Non_active', duration_field='duration', epoch_inc=30, threshold_lower=refvalues_s$min_conseczero_s) %>%
+    identify_nonwearing_periods(., activity_field='Activity', activity_value='Non_active', duration_field='duration', epoch_inc=30, threshold_lower=refvalues_s$min_conseczero_s)
+  label1_done = proc.time()
+  message(paste0('label 1 generation done in ', round((label1_done - summarize_done)[3], 2), ' s\n'))
+
+  epoch_rle_df <- epoch_rle_df %>%
     identify_pa_bouts(df=.,
                       activity_field='Activity', activity_values=c('Active'), nonactivity_values= c('Low active','Non_active'),
                       duration_field='duration',
@@ -58,8 +60,8 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
                       accelerometry_complete_days = refvalues_s$min_accel_wearing_s,
                       min_accelerometry_window = refvalues_s$min_pa_window_s,
                       low_intense_threshold = refvalues_s$max_pa_break_s)
-  label_done = proc.time()
-  message(paste0('label generation done in ', round((label_done - summarize_done)[3], 2), ' s\n'))
+  label2_done = proc.time()
+  message(paste0('label 2 generation done in ', round((label2_done - label1_done)[3], 2), ' s\n'))
 
   # 7. transfer the physical activity bout labels to the epoch_series, time_series
   if (!('bout_label' %in% colnames(epoch_rle_df))) {
@@ -257,7 +259,7 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
   summary_with_start_end_date <- inner_join(bout_start, bout_end, by=c( "bout_label", "NonWalk1_ACC", "NonWalk2_GPS", "Walk1_GPS", "n_epochs", "min_accel_count", "mean_accel_count", "max_accel_count", "complete_days", "sufficient_GPS_coverage", "dwell_bouts", "median_speed" ))
   #summary_with_start_end_date <- summary_with_start_end_date %>% select(-c(bout_label, sufficient_GPS_coverage, bout_start_date, bout_end_date, complete_days))
   other_done = proc.time()
-  message(paste0('other done in ', round((other_done - label_done)[3], 2), ' s\n'))
+  message(paste0('other done in ', round((other_done - label2_done)[3], 2), ' s\n'))
 
 
 
