@@ -24,7 +24,6 @@ if(length(subject_subset)>0){file_mapper_result <- file_mapper_result[file_mappe
 # result_save_folder=result_save_folder
 # time_zone=time_zone
 
-
 # run walkbout code:
 path_result <- process_many_subject(vector_of_acc_file_path = file_mapper_result$acc_file_path,
                                     vector_of_gps_file_path = file_mapper_result$gps_file_path,
@@ -33,7 +32,6 @@ path_result <- process_many_subject(vector_of_acc_file_path = file_mapper_result
                                     gps_file_reader = seattle_baseline_1_gps_file_reader,
                                     result_save_folder=result_save_folder,
                                     time_zone=time_zone)
-
 
 ## 2. read the processed results, do analysis and output summary
 result_df <- read_result_save_folder_as_dataframe(result_save_folder)

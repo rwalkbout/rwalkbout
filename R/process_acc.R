@@ -71,22 +71,6 @@ fix_date_time <- function(df, date_field, time_field, date_format, time_format, 
 }
 
 
-generate_sum_by_epoch <- function(df, epoch_field, epoch_inc, sum_field){
-  #
-  # calculate Activity sums per epoch
-  #
-  # df (data.table): the data.table containing the time-series records (accelerometry or GPS)
-  # epoch_field (str): name of the column to use
-  # epoch_inc (int): the seconds in an epoch
-  # sum_field (str): the name of the field to summate for activity per epoch
-  epoch_var = paste0({{sum_field}}, '_epochSum')
-
-  df %>%
-    group_by(.data[[ epoch_field ]]) %>%
-    mutate("{epoch_var}" := sum(.data[[ sum_field ]])) %>%
-    data.table()
-}
-
 summarize_maybe_bout <- function(df){
   rle_df <- with(rle(as.numeric(df$non_bout)),
                  data.frame(tibble("values" = values,
@@ -151,115 +135,46 @@ identify_nonwearing_periods <- function(df, activity_field='Activity', activity_
 }
 
 
-identify_pa_bouts <- function(df,
-                              activity_field='Activity',
-                              activity_values=c('Active'),
-                              nonactivity_values= c('Low active','Non_active'),
-                              bout_field='bout_id',
-                              duration_field='duration',
-                              epoch_inc=30,
-                              min_accelerometry_window = refvalues_s$min_pa_window_s,
-                              low_intense_threshold = refvalues_s$max_pa_break_s){
-  #
-  # identify physical activity bouts
-  # - physical activity bouts are ended when consecutive inactivity exceeds the tolerance break (low intensity threshold)
-  # - physical activity bouts are recognized and stored when the net activity period exceeds the minimum activity window (min_accelerometry_window)
-  #
-  # accelerometry_complete_days (int): total wearing time more than 8hrs in the day
-  # min_accelerometry_window (int): minimum time window for a physical activity bout e.g., 7 min
-  # low_intense_threshold (int): maximum low intensity threshold e.g., 2min
-  # epoch_inc (int): the seconds in an epoch
+identify_bouts <- function(df){
+  ##################################################################################################
+  # This is an alternate way to do Weipeng's loop but is different in that it always ends a
+  # bout on the last active epoch before 2 min of consecutive inactivity.
+  # This does not produce the same thing as Weipeng. Weipeng does 1 of 2 things:
+  # 1. If we have 5 accumulated minutes of activity/inactivity/non-activity without 2 sequential minutes of inactivity,
+  # and then 2 minutes of inactivity, Weipeng considers that entire 7 minutes a bout.
+  # 2. If we have 8 accumulated minutes of activity/inactivity/non-activity without 2 sequential minutes of inactivity,
+  # and then 2 minutes of inactivity, Weipeng considers the 8 minutes a bout and drops the 2 minutes of inactivity at the end.
 
-  # initial params
-  Act=0
-  Act_ind=c()
-  Inact=0
-  Inact_ind=c()
-  bout_number=1
-
-  for (ind in 1:nrow(df)){
-    r = df %>% slice(ind)
-
-    # add activity periods
-    if (r[[ activity_field ]] %in% { activity_values }){
-      # start of a bout or continuation of a potential active bout, accumulation of active time
-      Act = Act+(r[[ duration_field ]]*{epoch_inc})
-      Act_ind = c(Act_ind,ind)
-      Inact=0
-    } else if (r[[ activity_field ]] %in% { nonactivity_values } & Act!=0){
-      # if we dont have enough time to be a bout and we dont have enough inactivity to rule out a bout,
-        # create a tolerable break sequence and continue to accumulate time
-        # ie if break length in break sequence is tolerable and we dont have enough activity for a bout yet, continue accumulating
-      # Tolerable break sequence
-      if ((Inact+(r[[ duration_field ]]*epoch_inc)<low_intense_threshold) & (Act<min_accelerometry_window)){
-        Act = Act+(r[[ duration_field ]]*epoch_inc)
-        Act_ind = c(Act_ind,ind)
-        Inact = Inact+(r[[ duration_field ]]*epoch_inc)
-        Inact_ind = c(Inact_ind,ind)
-
-        # Inactivity too high. Not enough activity to be a window. Reset.
-        # crossed the low intensity threshold and dont have enough activity for a bout, end the bout and reset and there was no bout
-      } else if ((Inact+(r[[ duration_field ]]*epoch_inc)>=low_intense_threshold) & (Act<min_accelerometry_window)){
-        Act=0
-        Act_ind=c()
-        Inact=0
-        Inact_ind=c()
-
-        # Inactivity too high. Enough Activity to be a window. Record as a bout.
-        # crossed the low intensity threshold and have enough activity to be a bout, record bout and end.
-      } else if ((Inact+(r[[ duration_field ]]*epoch_inc)>=low_intense_threshold) & (Act>=min_accelerometry_window)){
-        #print(sort(c(Act_ind,Inact_ind)))
-        df[sort(c(Act_ind,Inact_ind)), {bout_field}] <- bout_number
-        bout_number= bout_number + 1
-
-        Act=0
-        Act_ind=c()
-        Inact=0
-        Inact_ind=c()
-      }
+  bout_df <- copy(df)
+  bout_df$Inactive <- (bout_df$Activity != 'Active')
+  bout_df$non_bout <- frollsum(bout_df$Inactive, 4) == 4
+  bout_df$bout_label <- NaN
+  bout_rle_df <- summarize_maybe_bout(bout_df)
+  potential_bouts <- bout_rle_df[(bout_rle_df$lengths >= 17) & (bout_rle_df$maybe_bout == 'T')]
+  num_bouts <- 0
+  for (i in 1:nrow(potential_bouts)){
+    row <- slice(potential_bouts, i)
+    start_ind <- row[['begin']]
+    end_ind <- row[['end']]-3
+    is_bout <- sum(bout_df[start_ind:end_ind]$Activity == 'Active') > 10
+    if (is_bout){
+      num_bouts <- num_bouts + 1
+      bout_df[start_ind:end_ind]$bout_label <- num_bouts
     }
   }
-  return(df)
+  bout_df <- bout_df[,Inactive:=NULL]
+  bout_df <- bout_df[,non_bout:=NULL]
+  return(bout_df)
 }
-
 
 ############# ############# ############# ############# #############
 #
 # Propagate labels and summarise time-series and run-length encoding
 #
-# function = propagate_bout_labels
 # function = propagate_binary_labels
 # function = compute_complete_days
 #
 ############# ############# ############# ############# #############
-
-propagate_bout_labels <- function(rle_df, epoch_series, bout_field='bout_id'){
-  #
-  # dimensions of rle_df start and end should correspond to epoch_series row_indices
-  #
-  # rle_df (data.table): the source compressed run-length encoding for the Activity types
-  # epoch_series (data.table): the target long table that describes each epoch within the rle_df data.table
-  # bout_field (str): the name of the column to be transfered
-
-  # generate the output dimension
-  epoch_series <- epoch_series %>% mutate('{bout_field}' := NaN)
-
-  # isolate the bouts
-  bouts <- rle_df %>% filter(!is.na(.data[[ bout_field ]]))
-
-  # loop through each bout
-  for (ind in (unique(bouts[[ bout_field ]]))){
-
-    # generate bout start and bout end
-    tmp = bouts %>%
-      filter(.[[ bout_field ]] %in% c(ind)) %>%
-      summarize(bout_start = min(begin), bout_end = max(end))
-
-    # assign bout label
-    epoch_series[tmp[['bout_start']] : tmp[['bout_end']], {bout_field}] <- ind
-  }
-  return(epoch_series)
-}
 
 
 propagate_binary_labels <- function(rle_df, epoch_series, feature_field='Nonwearing'){

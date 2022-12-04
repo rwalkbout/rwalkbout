@@ -30,59 +30,12 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
   label1_done = proc.time()
   message(paste0('label 1 generation done in ', round((label1_done - summarize_done)[3], 2), ' s\n'))
 
-  epoch_rle_df <- epoch_rle_df %>%
-    identify_pa_bouts(df=.,
-                      activity_field='Activity',
-                      activity_values=c('Active'),
-                      nonactivity_values= c('Low active','Non_active'),
-                      duration_field='duration',
-                      bout_field='bout_label',
-                      epoch_inc=30,
-                      min_accelerometry_window = refvalues_s$min_pa_window_s,
-                      low_intense_threshold = refvalues_s$max_pa_break_s)
-  label2_done = proc.time()
-  message(paste0('label 2 generation done in ', round((label2_done - label1_done)[3], 2), ' s\n'))
+  epoch_series <- identify_bouts(epoch_series)
+  bout_id_done = proc.time()
+  message(paste0('bout identification done in ', round((bout_id_done - label1_done)[3], 2), ' s\n'))
+
 
 ##################################################################################################
-  # This is an alternate way to do Weipeng's loop but is different in that it always ends a
-    # bout on the last active epoch before 2 min of consecutive inactivity.
-  # This does not produce the same thing as Weipeng. Weipeng does 1 of 2 things:
-  # 1. If we have 5 accumulated minutes of activity/inactivity/non-activity without 2 sequential minutes of inactivity,
-    # and then 2 minutes of inactivity, Weipeng considers that entire 7 minutes a bout.
-  # 2. If we have 8 accumulated minutes of activity/inactivity/non-activity without 2 sequential minutes of inactivity,
-    # and then 2 minutes of inactivity, Weipeng considers the 8 minutes a bout and drops the 2 minutes of inactivity at the end.
-
-      # bout_df <- copy(epoch_series)
-      # bout_df$Inactive <- (bout_df$Activity != 'Active')
-      # bout_df$non_bout <- frollsum(bout_df$Inactive, 4) == 4
-      # bout_df$bout_label <- NaN
-      # bout_rle_df <- summarize_maybe_bout(bout_df)
-      # potential_bouts <- bout_rle_df[(bout_rle_df$lengths >= 17) & (bout_rle_df$maybe_bout == 'T')]
-      # num_bouts <- 0
-      # for (i in 1:nrow(potential_bouts)){
-      #   row <- slice(potential_bouts, i)
-      #   start_ind <- row[['begin']]
-      #   end_ind <- row[['end']]-3
-      #   is_bout <- T #sum(bout_df[start_ind:end_ind]$Activity == 'Active') > 14
-      #   if (is_bout){
-      #     num_bouts <- num_bouts + 1
-      #     bout_df[start_ind:end_ind]$bout_label <- num_bouts
-      #   }
-      # }
-      # TO DO: reformat this data frame to look like weipeng's and then use it
-##################################################################################################
-
-
-  # 7. transfer the physical activity bout labels to the epoch_series, time_series
-  if (!('bout_label' %in% colnames(epoch_rle_df))) {
-    message("This subject has no physically active bouts, returning result of zero row")
-    tbl_colnames <- c('bout_label','NonWalk1_ACC','NonWalk2_GPS','Walk1_GPS','n_epochs','min_accel_count','mean_accel_count','max_accel_count','complete_days','sufficient_GPS_coverage','dwell_bouts','median_speed','bout_start_date','bout_start_time','bout_end_date','bout_end_time', 'This subject has no physically active bouts, returning result of zero row')
-    empty_df <- read_csv("\n", col_names = tbl_colnames)
-    return(empty_df)
-  }
-
-  # extract the bout labels
-  epoch_series <- propagate_bout_labels(rle_df=epoch_rle_df, epoch_series=epoch_series, bout_field='bout_label')
 
   # 8. Transfer on binary features tagged about the accelerometry time period, e.g., nonwearing times
   # nonwearing periods were defined as periods with consecutive zero actvity reads for >=20min
@@ -268,7 +221,7 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
   summary_with_start_end_date <- inner_join(bout_start, bout_end, by=c( "bout_label", "NonWalk1_ACC", "NonWalk2_GPS", "Walk1_GPS", "n_epochs", "min_accel_count", "mean_accel_count", "max_accel_count", "complete_days", "sufficient_GPS_coverage", "dwell_bouts", "median_speed" ))
   #summary_with_start_end_date <- summary_with_start_end_date %>% select(-c(bout_label, sufficient_GPS_coverage, bout_start_date, bout_end_date, complete_days))
   other_done = proc.time()
-  message(paste0('other done in ', round((other_done - label2_done)[3], 2), ' s\n'))
+  message(paste0('other done in ', round((other_done - label1_done)[3], 2), ' s\n'))
 
 
 
