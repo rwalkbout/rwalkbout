@@ -4,6 +4,8 @@ save_result <- function (processed_result, result_save_folder, subject_id) {
 }
 process_many_subject <- function (vector_of_acc_file_path=NULL, vector_of_gps_file_path=NULL, vector_of_subject_id=NULL, acc_file_reader=NULL, gps_file_reader=NULL, result_save_folder=NULL, time_zone=NULL) {
   # find pairs of acc and gps files
+  start = proc.time()
+
   expect_true(length(vector_of_acc_file_path) == length(vector_of_gps_file_path))
   expect_false(is.null(vector_of_acc_file_path))
   expect_false(is.null(vector_of_gps_file_path))
@@ -12,35 +14,39 @@ process_many_subject <- function (vector_of_acc_file_path=NULL, vector_of_gps_fi
   list_of_processed_result <- list()
   failed_subjects <- c()
   failed_messages <- c()
-for (i in seq_along(vector_of_acc_file_path)) {
-    acc_file_path <- vector_of_acc_file_path[i]
-    gps_file_path <- vector_of_gps_file_path[i]
-    subject_id <- vector_of_subject_id[i]
-    print(paste("Processing", vector_of_acc_file_path[i], vector_of_gps_file_path[i]))
-    print(paste("Progress:", i, "of", length(vector_of_acc_file_path), "acc/gps pairs"))
+  for (i in seq_along(vector_of_acc_file_path)) {
+      acc_file_path <- vector_of_acc_file_path[i]
+      gps_file_path <- vector_of_gps_file_path[i]
+      subject_id <- vector_of_subject_id[i]
+      print(paste("Processing", vector_of_acc_file_path[i], vector_of_gps_file_path[i]))
+      print(paste("Progress:", i, "of", length(vector_of_acc_file_path), "acc/gps pairs"))
 
-    processed_result <- process_one_subject(acc_file_path = acc_file_path,
-                                            gps_file_path = gps_file_path,
-                                            acc_file_reader = acc_file_reader,
-                                            gps_file_reader = gps_file_reader,
-                                            time_zone = time_zone)
-    if (nrow(processed_result) == 0) {
-      failed_subjects <- c(failed_subjects, subject_id)
-      failed_messages <- c(failed_messages, colnames(processed_result)[ncol(processed_result)])
+      processed_result <- process_one_subject(acc_file_path = acc_file_path,
+                                              gps_file_path = gps_file_path,
+                                              acc_file_reader = acc_file_reader,
+                                              gps_file_reader = gps_file_reader,
+                                              time_zone = time_zone)
+      if (nrow(processed_result) == 0) {
+        failed_subjects <- c(failed_subjects, subject_id)
+        failed_messages <- c(failed_messages, colnames(processed_result)[ncol(processed_result)])
+      }
+
+      processed_result$acc_file_path <- acc_file_path
+      processed_result$gps_file_path <- gps_file_path
+
+      save_result(processed_result = processed_result, result_save_folder = result_save_folder, subject_id=subject_id)
+      list_of_processed_result[[i]] <- processed_result
     }
-
-    processed_result$acc_file_path <- acc_file_path
-    processed_result$gps_file_path <- gps_file_path
-
-    save_result(processed_result = processed_result, result_save_folder = result_save_folder, subject_id=subject_id)
-    list_of_processed_result[[i]] <- processed_result
-  }
 
 
   if(length(failed_subjects)>0){print(tibble('failed_subject'=failed_subjects, 'message'=failed_messages) %>% arrange(message))}
 
   # rbind and return
   summary_table <- do.call(rbind, list_of_processed_result)
+
+  num_subjects = length(vector_of_acc_file_path)
+  runtime = (proc.time() - start)[3]
+  message(paste0(num_subjects, ' subjects processed in ', round(runtime, 2), 's\n'))
   return(summary_table)
 }
 

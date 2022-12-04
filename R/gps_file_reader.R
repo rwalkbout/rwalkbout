@@ -14,7 +14,7 @@ portland_gps_file_reader <- function (gps_file_path) {
 
 #' Seattle GPS reader
 seattle_baseline_1_gps_file_reader <- function (gps_file_path) {
-  input_df <- read_csv(file=gps_file_path, skip = 1, col_names = c("record_index", "date", "time", "latitude", "longitude", "speed", "altitude"))
+  input_df <- read_csv(file=gps_file_path, skip = 1, show_col_types=FALSE, col_names = c("record_index", "date", "time", "latitude", "longitude", "speed", "altitude"))
 
   ## make latitude/longitude
   latitude <- input_df$latitude/100
