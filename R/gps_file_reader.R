@@ -40,7 +40,7 @@ seattle_baseline_1_gps_file_reader <- function (gps_file_path) {
     stop("Unknown date format")
   }
   date_time_string_vector <- paste(input_df$date, input_df$time)
-  source_time_zone <- "UTC"
+  source_time_zone <- "America/Los_Angeles"
   target_time_zone <- "America/Los_Angeles"
   date_time <- with_tz(as.POSIXct(date_time_string_vector, format=date_time_format, tz=source_time_zone), tzone = target_time_zone)
 
