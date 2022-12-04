@@ -87,6 +87,20 @@ generate_sum_by_epoch <- function(df, epoch_field, epoch_inc, sum_field){
     data.table()
 }
 
+summarize_maybe_bout <- function(df){
+  rle_df <- with(rle(as.numeric(df$non_bout)),
+                 data.frame(tibble("values" = values,
+                                   "lengths" = lengths,
+                                   'maybe_bout' := factor(values, labels = c('T', 'F')),
+                                   "cumul_length" = cumsum(lengths),
+                                   "begin" = replace_na(lag(cumul_length) + 1, replace = 1),
+                                   "end" = cumul_length,
+                                   "duration" = end - begin + 1))) %>%
+    data.table()
+  return(rle_df)
+
+}
+
 
 summarize_epoch_activity <- function(df, activity_field, epoch_inc){
   #
@@ -144,7 +158,6 @@ identify_pa_bouts <- function(df,
                               bout_field='bout_id',
                               duration_field='duration',
                               epoch_inc=30,
-                              accelerometry_complete_days = refvalues_s$min_accel_wearing_s,
                               min_accelerometry_window = refvalues_s$min_pa_window_s,
                               low_intense_threshold = refvalues_s$max_pa_break_s){
   #
@@ -169,13 +182,14 @@ identify_pa_bouts <- function(df,
 
     # add activity periods
     if (r[[ activity_field ]] %in% { activity_values }){
+      # start of a bout or continuation of a potential active bout, accumulation of active time
       Act = Act+(r[[ duration_field ]]*{epoch_inc})
       Act_ind = c(Act_ind,ind)
       Inact=0
-    }
-
-    # low intensity or minor non-activity
-    if (r[[ activity_field ]] %in% { nonactivity_values } & Act!=0){
+    } else if (r[[ activity_field ]] %in% { nonactivity_values } & Act!=0){
+      # if we dont have enough time to be a bout and we dont have enough inactivity to rule out a bout,
+        # create a tolerable break sequence and continue to accumulate time
+        # ie if break length in break sequence is tolerable and we dont have enough activity for a bout yet, continue accumulating
       # Tolerable break sequence
       if ((Inact+(r[[ duration_field ]]*epoch_inc)<low_intense_threshold) & (Act<min_accelerometry_window)){
         Act = Act+(r[[ duration_field ]]*epoch_inc)
@@ -184,6 +198,7 @@ identify_pa_bouts <- function(df,
         Inact_ind = c(Inact_ind,ind)
 
         # Inactivity too high. Not enough activity to be a window. Reset.
+        # crossed the low intensity threshold and dont have enough activity for a bout, end the bout and reset and there was no bout
       } else if ((Inact+(r[[ duration_field ]]*epoch_inc)>=low_intense_threshold) & (Act<min_accelerometry_window)){
         Act=0
         Act_ind=c()
@@ -191,6 +206,7 @@ identify_pa_bouts <- function(df,
         Inact_ind=c()
 
         # Inactivity too high. Enough Activity to be a window. Record as a bout.
+        # crossed the low intensity threshold and have enough activity to be a bout, record bout and end.
       } else if ((Inact+(r[[ duration_field ]]*epoch_inc)>=low_intense_threshold) & (Act>=min_accelerometry_window)){
         #print(sort(c(Act_ind,Inact_ind)))
         df[sort(c(Act_ind,Inact_ind)), {bout_field}] <- bout_number
