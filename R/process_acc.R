@@ -150,7 +150,7 @@ identify_bouts <- function(df){
   bout_df$non_bout <- frollsum(bout_df$Inactive, 4) == 4
   bout_df$bout_label <- NaN
   bout_rle_df <- summarize_maybe_bout(bout_df)
-  potential_bouts <- bout_rle_df[(bout_rle_df$lengths >= 17) & (bout_rle_df$maybe_bout == 'T')]
+  potential_bouts <- bout_rle_df[(bout_rle_df$lengths >= 13) & (bout_rle_df$maybe_bout == 'T')]
   num_bouts <- 0
   for (i in 1:nrow(potential_bouts)){
     row <- slice(potential_bouts, i)

@@ -11,6 +11,7 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
   epoch_series <- acc_file_reader(acc_file_path = acc_file_path)
   acc_done = proc.time()
   message(paste0('acc_data processed in', round((acc_done - start)[3], 2), ' s\n'))
+  browser()
 
   epoch_rle_df <- summarize_epoch_activity(df=epoch_series, activity_field='Activity', epoch_inc=30)
   summarize_done = proc.time()
@@ -33,8 +34,6 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
   epoch_series <- identify_bouts(epoch_series)
   bout_id_done = proc.time()
   message(paste0('bout identification done in ', round((bout_id_done - label1_done)[3], 2), ' s\n'))
-
-
 ##################################################################################################
 
   # 8. Transfer on binary features tagged about the accelerometry time period, e.g., nonwearing times

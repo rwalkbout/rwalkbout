@@ -15,8 +15,8 @@ portland_acc_file_reader <- function (acc_file_path) {
 seattle_baseline_1_acc_file_reader <- function (acc_file_path) {
   ## read count column
   count_df <- read_csv(file=acc_file_path, skip = 10, show_col_types=FALSE, col_names = c("count", "other1", "other2")) %>% select(count)
-
   time_zone <- "America/Los_Angeles"
+  browser()
 
   ## make date_time column
   file_header <- read_csv(file=acc_file_path, n_max = 9, show_col_types=FALSE, col_names = 'header')
