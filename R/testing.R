@@ -73,11 +73,36 @@ test <- all_bouts_for_id('10100052')
 
 #### USING ACCELEROMETRY PACKAGE ###
 library(accelerometry)
+library(data.table)
+pkg_dat <- as.data.table(copy(unidata))
+setnames(pkg_dat, c("seqn", "paxday", "paxinten"), c("participant", "epoch_day", "count"))
 epoch_series <- read_csv("/home/wilnerl/epoch_series.csv")
-bouts_acc <- bouts(counts = epoch_series$Axis1_epochSum,
-                   bout_length = 5,
-                   tol_lower = 2,
-                   days_distinct = TRUE)
+dat <- as.data.table(copy(epoch_series))
+dat <- dat[,Activity:=NULL]
+setnames(dat, "Axis1_epochSum", "count")
+dat <- dat[,participant:=10100052]
+bouts_21007 <- bouts(counts = pkg_dat[participant==21007]$count,
+                   bout_length = 10,
+                   thresh_lower = 2020,
+                   tol = 2,
+                   tol_lower = 2)
+sum(bouts_21007) # 10075
+bouts_10100052 <- bouts(counts = dat[participant==10100052]$count,
+                   bout_length = 10*2,
+                   thresh_lower = 2020*2,
+                   tol = 2*2,
+                   tol_lower = 2*2)
+sum(bouts_10100052)
+# multiplying by 2 because i believe their rows are minutes and our rows are 30 second epochs
+# how do they handle days??
+  # it seems like they just sort of ignore days and
+  # calculate bouts consecutively for the entire dataset?
+# what is the sum they are calculating here?
 
+# the bout output is minutes of bouted activity ?????
+# add summary statistic of total # of min for each participant
 
-
+## TO DO
+# 1. Email dr van domelen
+# 2. Add epoch length as an arg
+# 3. add bouted minutes as a summary statistic to our output
