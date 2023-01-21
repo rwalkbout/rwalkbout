@@ -6,7 +6,7 @@ library("measurements")
 time_zone <- 'America/Los_Angeles'
 acc_folder_path <- '/projects/trac/data/acc'
 gps_folder_path <- '/projects/trac/data/gps'
-result_save_folder <- "~/walkbout_results/test/trac" # TO DO: Make results directory if it doesn't exist
+result_save_folder <- "~/walkbout_results/test/trac"
 if(!(dir.exists(result_save_folder))){
   dir.create(file.path(results_save_folder))}
 
@@ -14,8 +14,8 @@ if(!(dir.exists(result_save_folder))){
 # pull file paths:
 file_mapper_result <- seattle_baseline_1_file_mapper(acc_folder_path=acc_folder_path, gps_folder_path=gps_folder_path)
 # for testing:
-subject_subset <- c()
-subject_subset <- c("10101329_baseline_1", "15033637_baseline_1", "10100052_baseline_1")
+  subject_subset <- c()
+  # subject_subset <- c("20199020_baseline_1", "10100052_baseline_1")
 if(length(subject_subset)>0){
   file_mapper_result <- file_mapper_result[file_mapper_result$subject_id %in% subject_subset,]
 }
