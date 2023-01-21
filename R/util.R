@@ -49,6 +49,7 @@ get_subject_aggragtes <- function (group_df, group_key) {
       select(walk_bout_start, walk_bout_end, walk_bout_duration) %>%
       select(walk_bout_duration)
     aggregate_value_list[['walk_bout_mean_duration_mins']] <- mean(as.numeric(duration_df$walk_bout_duration)) # then mean of duration
+    aggregate_value_list[['walk_bout_total_mins_per_subj']] <- sum(duration_df$walk_bout_duration)
   }
 
   subject_aggregated_df <- as_tibble(aggregate_value_list)

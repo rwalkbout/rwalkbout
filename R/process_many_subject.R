@@ -4,6 +4,7 @@ save_result <- function (processed_result, result_save_folder, subject_id) {
 }
 process_many_subject <- function (vector_of_acc_file_path=NULL, vector_of_gps_file_path=NULL, vector_of_subject_id=NULL, acc_file_reader=NULL, gps_file_reader=NULL, result_save_folder=NULL, time_zone=NULL) {
   # find pairs of acc and gps files
+  unlink(paste0(result_save_folder, "/*")) # remove any files that exist in the directory right now
   start = proc.time()
 
   expect_true(length(vector_of_acc_file_path) == length(vector_of_gps_file_path))

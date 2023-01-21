@@ -73,7 +73,7 @@ fix_date_time <- function(df, date_field, time_field, date_format, time_format, 
 
 summarize_maybe_bout <- function(df){
   rle_df <- with(rle(as.numeric(df$non_bout)),
-                 data.frame(tibble("values" = values,
+                 data.frame(tibble("values" = replace_na(values, replace = 0),
                                    "lengths" = lengths,
                                    'maybe_bout' := factor(values, labels = c('T', 'F')),
                                    "cumul_length" = cumsum(lengths),
@@ -152,6 +152,7 @@ identify_bouts <- function(df){
   bout_rle_df <- summarize_maybe_bout(bout_df)
   potential_bouts <- bout_rle_df[(bout_rle_df$lengths >= 13) & (bout_rle_df$maybe_bout == 'T')]
   num_bouts <- 0
+  if(nrow(potential_bouts)>0){
   for (i in 1:nrow(potential_bouts)){
     row <- slice(potential_bouts, i)
     start_ind <- row[['begin']]
@@ -161,6 +162,7 @@ identify_bouts <- function(df){
       num_bouts <- num_bouts + 1
       bout_df[start_ind:end_ind]$bout_label <- num_bouts
     }
+  }
   }
   bout_df <- bout_df[,Inactive:=NULL]
   bout_df <- bout_df[,non_bout:=NULL]
