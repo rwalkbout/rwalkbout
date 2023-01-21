@@ -62,7 +62,7 @@ refvalues_s$min_GPS_data_s <- refvalues$min_GPS_data_day*24*60*60
 refvalues_s$min_traveldiary_s <- refvalues$min_traveldiary_day*24*60*60
 refvalues_s$min_accel_s <- refvalues$min_accel_day*24*60*60
 
-refvalues_s$min_accel_wearing_s <- refvalues$min_accel_wearing_hr*60*60
+# refvalues_s$min_accel_wearing_s <- refvalues$min_accel_wearing_hr*60*60   # never used
 refvalues_s$min_conseczero_s <- refvalues$min_conseczero_m*60
 refvalues_s$min_walking_bout_s <- refvalues$min_walking_bout_m*60
 

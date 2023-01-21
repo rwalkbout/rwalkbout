@@ -14,12 +14,12 @@ portland_acc_file_reader <- function (acc_file_path) {
 #' Seattle Acceletrometry reader
 seattle_baseline_1_acc_file_reader <- function (acc_file_path) {
   ## read count column
-  count_df <- read_csv(file=acc_file_path, skip = 10, col_names = c("count", "other1", "other2")) %>% select(count)
-
+  count_df <- read_csv(file=acc_file_path, skip = 10, show_col_types=FALSE, col_names = c("count", "other1", "other2")) %>% select(count)
   time_zone <- "America/Los_Angeles"
+  browser()
 
   ## make date_time column
-  file_header <- read_csv(file=acc_file_path, n_max = 9, col_names = 'header')
+  file_header <- read_csv(file=acc_file_path, n_max = 9, show_col_types=FALSE, col_names = 'header')
   #epoch_period <- as.integer(gsub(".* .* \\(.*\\) 00:00:(.*)", "\\1", file_header$header[5]))
   if (file_header$header[5] == "Epoch Period (hh:mm:ss) 00:00:30") {
     epoch_period <- 30
@@ -32,17 +32,15 @@ seattle_baseline_1_acc_file_reader <- function (acc_file_path) {
   num_time_stamp <- nrow(count_df)
   date_time_column <- seq(from=start_date_time, length.out = num_time_stamp, by = epoch_period, tz=time_zone)
 
-  ## put together date_time and count
-  acc_data <- count_df %>% add_column(date_time = date_time_column, .before = 1)
-
-  ## interpolate 30 epoch period to 15 epoch period
-  interpolated_count <- c()
-  for (one_count in count_df$count) {
-    interpolated_one_count_pair <- c(floor(one_count/2), ceiling(one_count/2))
-    interpolated_count <- c(interpolated_count, interpolated_one_count_pair)
-  }
-  interpolated_date_time_column <- seq(from=start_date_time, length.out = num_time_stamp*2, by = epoch_period/2, tz=time_zone)
-  acc_data <- tibble(date_time = interpolated_date_time_column, count = interpolated_count)
+  acc_data <- tibble(
+    epoch_time = format(date_time_column, format='%Y-%m-%d %H:%M:%S', tz=time_zone, usetz=TRUE),
+    Axis1_epochSum = count_df$count,
+    Activity = 'Low active'
+  )
+  acc_data <- as.data.table(acc_data)
+  acc_data <- acc_data[Axis1_epochSum==0, Activity := 'Non_active']
+  acc_data <- acc_data[Axis1_epochSum > refvalues$min_pa_cpe, Activity := 'Active']
+  acc_data$Activity <- as.factor(acc_data$Activity)
 
   return(acc_data)
 }
