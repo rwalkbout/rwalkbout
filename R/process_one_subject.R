@@ -105,7 +105,6 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
 
   # unique bouts
   bouts <- gps_acc %>% filter(!is.na(bout_label)) %>% .$bout_label %>% unique()
-
   # loop through bouts and generate bounding circle
   for (eachbout in bouts){
     # 5. identify unique spatial points
@@ -175,7 +174,11 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
       NonWalk2_GPS = case_when((complete_days==T & dwell_bouts==1) | # dwell-bout
                                  (complete_days==T & dwell_bouts==0 &
                                    (median_speed < refvalues_s$min_gps_walking_speed_km_h | median_speed >refvalues_s$max_gps_walking_speed_km_h)) ~1), # treadmill or bicycle
+<<<<<<< Updated upstream
       Walk1_GPS = case_when(complete_days==T & dwell_bouts==0 & any(sufficient_GPS_coverage != FALSE) &
+=======
+      Walk1_GPS = case_when(complete_days==T & dwell_bouts==0
+>>>>>>> Stashed changes
                               median_speed >= refvalues_s$min_gps_walking_speed_km_h & median_speed <=refvalues_s$max_gps_walking_speed_km_h ~ 1)) %>% # walk bouts
     data.table()
 
@@ -216,6 +219,7 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
     rename(bout_end_date=epoch_date, bout_end_time=epoch_time) %>%
     distinct() %>%
     filter(!is.na(bout_label))
+  browser()
 
   summary_with_start_end_date <- inner_join(bout_start, bout_end, by=c( "bout_label", "NonWalk1_ACC", "NonWalk2_GPS", "Walk1_GPS", "n_epochs", "min_accel_count", "mean_accel_count", "max_accel_count", "complete_days", "sufficient_GPS_coverage", "dwell_bouts", "median_speed" ))
   #summary_with_start_end_date <- summary_with_start_end_date %>% select(-c(bout_label, sufficient_GPS_coverage, bout_start_date, bout_end_date, complete_days))

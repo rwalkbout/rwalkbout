@@ -15,7 +15,7 @@ if(!(dir.exists(result_save_folder))){
 file_mapper_result <- seattle_baseline_1_file_mapper(acc_folder_path=acc_folder_path, gps_folder_path=gps_folder_path)
 # for testing:
   subject_subset <- c()
-  # subject_subset <- c("20199020_baseline_1", "10100052_baseline_1")
+  subject_subset <- c("10102248_baseline_1", "20199019_baseline_1") #  "13322435_baseline_1"
 if(length(subject_subset)>0){
   file_mapper_result <- file_mapper_result[file_mapper_result$subject_id %in% subject_subset,]
 }
