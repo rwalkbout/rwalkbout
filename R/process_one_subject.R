@@ -163,7 +163,7 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
     data.table() %>%
     merge(epoch_series, ., by='bout_label', all=T) %>% # merge in the epoch_series data
     merge(., gps_dq, by='bout_label', all=T) # merge in the data quality assessment and complete days
-
+  browser()
   # find different kinds of bouts
   epoch_summary <- epoch_summary %>%
     group_by(bout_label) %>%
@@ -175,7 +175,7 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
       NonWalk2_GPS = case_when((complete_days==T & dwell_bouts==1) | # dwell-bout
                                  (complete_days==T & dwell_bouts==0 &
                                    (median_speed < refvalues_s$min_gps_walking_speed_km_h | median_speed >refvalues_s$max_gps_walking_speed_km_h)) ~1), # treadmill or bicycle
-      Walk1_GPS = case_when(complete_days==T & dwell_bouts==0 &
+      Walk1_GPS = case_when(complete_days==T & dwell_bouts==0 & any(sufficient_GPS_coverage != FALSE) &
                               median_speed >= refvalues_s$min_gps_walking_speed_km_h & median_speed <=refvalues_s$max_gps_walking_speed_km_h ~ 1)) %>% # walk bouts
     data.table()
 
