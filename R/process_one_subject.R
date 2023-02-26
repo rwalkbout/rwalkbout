@@ -140,12 +140,13 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
     gps_acc[bout_label==eachbout, Point_circle_area:=P_area]
     P_radii <- sqrt(P_area/pi) %>% conv_unit(., from='m', to='ft') # Area = pi*r^2; r units should be in m
     gps_acc[bout_label==eachbout, Point_radius:=P_radii]
+    # browser()
 
     # assign figure title
     title(paste0('Bout ',toString(eachbout),': ',toString(round(P_radii,3)), ' feet circle radius'), add=TRUE)
 
     # 11. evaluate circle radius for dwell bout category (if case_when condition met, assign 1)
-    gps_acc[bout_label==eachbout, dwell_bout:= case_when(Point_radius<=refvalues_s$max_dwellbout_radii_ft & n_distinct(epoch_time)>=refvalues_s$min_dwellbout_obs ~ 1)]  # weipeng edit; should be max_dwell_bout_radii_ft
+    gps_acc[bout_label==eachbout, dwell_bout:= case_when(Point_radius<=refvalues_s$max_dwellbout_radii_ft & n_distinct(epoch_time)>=refvalues_s$min_dwellbout_obs ~ 1)]
   }
 
   if (!("dwell_bout" %in% colnames(gps_acc)) && sum(gps_acc$incomplete_GPS[!is.na(gps_acc$incomplete_GPS)] != 1) == 0) {  # no dwell bout at all due to incomplete GPS for all bouts
