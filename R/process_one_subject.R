@@ -174,11 +174,7 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
       NonWalk2_GPS = case_when((complete_days==T & dwell_bouts==1) | # dwell-bout
                                  (complete_days==T & dwell_bouts==0 &
                                    (median_speed < refvalues_s$min_gps_walking_speed_km_h | median_speed >refvalues_s$max_gps_walking_speed_km_h)) ~1), # treadmill or bicycle
-<<<<<<< Updated upstream
       Walk1_GPS = case_when(complete_days==T & dwell_bouts==0 & any(sufficient_GPS_coverage != FALSE) &
-=======
-      Walk1_GPS = case_when(complete_days==T & dwell_bouts==0
->>>>>>> Stashed changes
                               median_speed >= refvalues_s$min_gps_walking_speed_km_h & median_speed <=refvalues_s$max_gps_walking_speed_km_h ~ 1)) %>% # walk bouts
     data.table()
 
