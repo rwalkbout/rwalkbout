@@ -157,7 +157,7 @@ identify_bouts <- function(df){
     row <- slice(potential_bouts, i)
     start_ind <- row[['begin']]
     end_ind <- row[['end']]-3
-    is_bout <- sum(bout_df[start_ind:end_ind]$Activity == 'Active') > 10
+    is_bout <- sum(bout_df[start_ind:end_ind]$Activity == 'Active') >= 10
     if (is_bout){
       num_bouts <- num_bouts + 1
       bout_df[start_ind:end_ind]$bout_label <- num_bouts

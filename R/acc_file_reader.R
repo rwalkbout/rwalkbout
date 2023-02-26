@@ -40,6 +40,5 @@ seattle_baseline_1_acc_file_reader <- function (acc_file_path) {
   acc_data <- acc_data[Axis1_epochSum==0, Activity := 'Non_active']
   acc_data <- acc_data[Axis1_epochSum > refvalues$min_pa_cpe, Activity := 'Active']
   acc_data$Activity <- as.factor(acc_data$Activity)
-
   return(acc_data)
 }
