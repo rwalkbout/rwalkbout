@@ -1,0 +1,147 @@
+---
+title: "TRACTION Meeting"
+author: "Lauren Wilner"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:   
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 6
+    theme: simplex
+    df_print: paged
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(knitr)
+library(ggforce)
+library(lwgeom)
+library(sf)
+library(geosphere)
+library(measurements)
+library(patchwork)
+
+low_active_thresh <- 500
+gps_thresh <- 66
+
+# Plotting function
+source("~/repos/rwalkbout/R/bout_plot.R")
+```   
+*Per Phil et al's paper: PA bouts were defined as time intervals having accelerometer counts > 500 counts per 30 s epoch (cpe) for at least 7 min, allowing for up to 2 min of epochs below that threshold during the 7 min interval.*
+*Per Steve/Amy/Lauren conversations: We have decided that we will consider something a bout as long as it is at least 5 minutes.*
+*NOTE: all of this is done presuming that the accelerometry package processed the accelerometry data the same way/the correct way! I cannot use the package right now and thus cannot confirm this* 
+### Section 1: Bouts that differ due to cumulative versus consecutive low/inactive time counting
+<p>
+<p>
+
+**ID 10902186**:  
+```{r ID 10902186, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 10902186
+phil_start_time <- ymd_hms("2008-09-09 07:14:00")
+phil_end_time <- ymd_hms("2008-09-09 07:33:00")
+w_start_time <- ymd_hms("2008-09-09 07:17:00")
+w_end_time <- ymd_hms("2008-09-09 07:35:30")
+phil_bout_duration <- 19.5
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+kable(table %>% filter(!is.na(bout_label)))
+
+```
+
+
+**ID 10704259**: We start a bout at 14:22:00 on an active epoch. We end it at 14:33:30 when there are 4+ periods of inactivity. Phil ends at the same point for the same reason. Phil starts his bout on an active epoch at 14:25 presumably because he had been trying to start bouts before that and hitting his threshold of cumulative low/inactivity. This difference can be attributed to a difference in our implementation of cumulative vs consecutive thresholds for ending a bout and thus for where we begin bouts based on where other bouts end.
+```{r ID 10704259, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 10704259
+phil_start_time <- ymd_hms("2008-09-10 14:25:00")
+phil_end_time <- ymd_hms("2008-09-10 14:33:00")
+w_start_time <- ymd_hms("2008-09-10 14:22:00")
+w_end_time <- ymd_hms("2008-09-10 14:33:30")
+phil_bout_duration <- 9
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+kable(table %>% filter(!is.na(bout_label)))
+
+```
+
+
+**ID 14427353**: This is the same scenario as above with different starts/stops due to differences in cumulative/consecutive inactivity to end a bout. we are already in a bout when phil starts this one! 
+```{r ID 14427353, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 14427353
+phil_start_time <- ymd_hms("2009-05-29 13:55:00")
+phil_end_time <- ymd_hms("2009-05-29 14:06:00")
+w_start_time <- ymd_hms("2009-05-29 13:49:00")
+w_end_time <- ymd_hms("2009-05-29 14:06:00")
+phil_bout_duration <- 11
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+kable(table %>% filter(!is.na(bout_label)))
+
+```
+
+\pagebreak
+
+
+### Section 2: Differences based on speed 
+
+*PA bouts occurring within a single location were considered as “dwells,” which were considered non-walking by definition. Identifying a dwell bout was accomplished by (1) calculating the sum of distances from each point to all other points within the bout; (2) selecting points having sum distance below the 95th percentile of the sum distances of all points in the bout; (3) generating a minimum bounding circle fully containing the selected points; (4) finally obtaining the circle’s radius. Bouts with radii <= 66 ft were considered as dwell bouts. Because some non-dwell bouts with few GPS observations were likely to have radii <= 66 ft, dwell bouts were defined as having >=10 GPS points.*
+<p>
+*Three types of issues to look into, will look at 2 of each:* 
+*1. Phil identifies a dwell bout and Weipeng identifies nothing* 
+*2. Phil identifies a dwell bout and Weipeng identifies a walk bout* 
+*3. Phil identifies a dwell bout and Weipeng identifies a nonwalk2_gps_speed bout* 
+<p>
+\bigskip
+
+
+\pagebreak
+
+#### Code Appendix
+
+```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

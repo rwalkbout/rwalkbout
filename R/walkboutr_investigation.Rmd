@@ -1,0 +1,509 @@
+---
+title: "walkboutr investigation"
+author: "Lauren Wilner"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:   
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 6
+    theme: simplex
+    df_print: paged
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(knitr)
+library(ggforce)
+library(lwgeom)
+library(sf)
+library(geosphere)
+library(measurements)
+library(patchwork)
+
+low_active_thresh <- 500
+gps_thresh <- 66
+# bout_plot(id, gps_thresh, low_active_thresh, table)
+
+# Plotting function
+source("~/repos/rwalkbout/R/bout_plot.R")
+```   
+
+### Section 1: Instances where a bout is identified by Phil's code but not Weipeng's
+*Per phil's paper, he says: PA bouts were defined as time intervals having accelerometer counts > 500 counts per 30 s epoch (cpe) for at least 7 min, allowing for up to 2 min of epochs below that threshold during the 7 min interval.*
+*We have decided that we will consider something a bout as long as it is at least 5 minutes.*
+<p> 
+<p> 
+#### Long Bouts
+<p>
+<p>
+
+**ID 10100725**: Part of the reason that we do not find the same bout is because at this time,weipeng has a bout in progress. This is because at 10:21a, the individual was active for until 10:53a, at which point they were low active then non active and we ended their bout. That said, I have no idea why Phil did not start this bout until 10:25a and I also do not understand why phil ends this bout at 10:46a because this person remains active until 10:52a. Some of the epochs between 10:46a and 10:52a are low active, but there are never more than 1 low active epochs in a row. If it were an issue of consecutive vs cumulative inactive time, that still does not explain it becuase phil ends this bout after 6 epochs of low activity, which violates what his paper says he does which is end a bout after 2 min, or 4 epochs, of non-active time. I cannot explain what is going on with phil's code here, but I can verify that our code is correct. 
+```{r ID 10100725, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 10100725
+phil_start_time <- ymd_hms("2008-07-21 10:25:00")
+phil_end_time <- ymd_hms("2008-07-21 10:46:00")
+w_start_time <- ymd_hms("2008-07-21 10:21:00")
+w_end_time <- ymd_hms("2008-07-21 10:52:30")
+phil_bout_duration <- 21.5
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+
+```
+
+
+**ID 14835176**: I have absolutely no idea how phil started a bout at 8:57a, but we had started it at 8:46a because this participant was active without even any inactivity/low activity starting at 8:46a. We both end it at 9:07 a because starting then there is more than 4 epochs of low/inactivity. That said, there were already exactly 4 epochs of low activity in this bout, and at 9:07 the fifth one occurs. This makes me think that the logic is allow 4 epochs of inactivity/low activity, and end bouts on the 5th, which may explain some of the other weirdness with how he counts inactive epochs for other participants.
+```{r ID 14835176, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 14835176
+phil_start_time <- ymd_hms("2009-07-08 08:57:00")
+phil_end_time <- ymd_hms("2009-07-08 09:07:00")
+w_start_time <- ymd_hms("2009-07-08 08:46:00")
+w_end_time <- ymd_hms("2009-07-08 09:07:00")
+phil_bout_duration <- 10
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+kable(table %>% filter(!is.na(bout_label)))
+
+```
+
+**ID 14830788**: This was a bug in both our code and phil's code. phil is counting a bout that has more inactivity than he says his code tolerates, but this was also a bug in our code. Per our defintion, we asserted that a bout must: Contains at least 10 cumulative 30-second epochs of activity. In our implementation, though, I was allowing a bout to contain more than 10 cumulative 30 second epochs, rather than >= 10. I have corrected this in our code.
+```{r ID 14830788, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 14830788
+phil_start_time <- ymd_hms("2009-07-02 11:07:00")
+phil_end_time <- ymd_hms("2009-07-02 14:31:00")
+w_start_time <- ymd_hms("2009-07-02 11:07:30")
+w_end_time <- ymd_hms("2009-07-02 11:12:00")
+phil_bout_duration <- 204
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+
+```
+
+**ID 13322435**: We are counting this as a bout but we begin counting much earlier (at 15:45). I would guess phil did not do the same because between 15:45 and 15:57 there are more than 4 cumulative epochs of inactive/low active time. We count consecutively
+and we never reach 4 consecutive epochs in the time period. Of note, I am also wondering if phil considers it to be 4 cumulative epochs of inactivity per 14 cumulative epochs (7 min) of active time. Because in this period from 15:57 - 17:15, there are 10 epochs of inactive time and approximately 26 epochs of active time. The math isnt perfect but im just confused about his logic. this doesnt really matter since we arent using cumulative inactivity but just wondering
+```{r ID 13322435, echo=TRUE, include=FALSE}
+id <- 13322435
+phil_start_time <- ymd_hms("2009-04-17 15:57:00")
+phil_end_time <- ymd_hms("2009-04-17 17:15:00")
+w_start_time <- ymd_hms("2009-04-17 15:45:30")
+w_end_time <- ymd_hms("2009-04-17 15:59:30")
+phil_bout_duration <- 78
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+
+```
+
+**ID 10101700**: We do not start a new bout at 9:01a because we are already in the middle of a bout that started at 7:58a. I would guess that Phil started a bout at the same time, and ended that bout after 4 non-consecutive but cumulative instances of low/inactivity at 8:58a. This explains why we may be in the middle of a bout and phil is not in the middle of a bout. What I don't understand is how he then started a bout at 9:01a because from there, there are the following epochs: active / low active / active / low active / low active / active / low active / active 8:58:30a / 8:59:00a / 8:59:30 / 9:00:00a / 9:00:30a / 9:01:00a / 9:01:30a / 9:02:00a So, theoretically phil would have started counting a bout at 8:58a and then hit his limit of low/inactivity at 9:01:30a and then started the bout at 9:02:00a and gone from there. In any case, our code is functioning properly and according to our rules.
+```{r ID 10101700, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 10101700
+phil_start_time <- ymd_hms("2008-09-14 09:01:00")
+phil_end_time <- ymd_hms("2008-09-14 09:39:00")
+w_start_time <- ymd_hms("2008-09-14 07:58:00")
+w_end_time <- ymd_hms("2008-09-14 09:24:30")
+phil_bout_duration <- 38.5
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+
+```
+
+<p> 
+<p> 
+#### Short Bouts 
+*there are no bouts under 8 min that phil identifies and we do not also identify in the same way. so, ill check 5 more people*
+<p>
+<p>
+
+**ID 11516771**: Phil starts this bout at 21:13 when there is one active epoch, followed by 4 inactive epochs and then at 21:15:30 there is active time. We start our bout here, at 21:15:30 because we tried to start at 21:13, hit 4 inactive/low active epochs, and ended our bout attempt. we then started again at 21:15 and were able to get into a bout. This active time lasts until one low active epoch at 21:31:00 and then alternating active and low active time until 21:36:30 at which point non active time for more than 4 epochs starts at 21:36. phil ends at 21:34 becuase there is an epoch of low active time which must put him over his cumulative threshold. But, since 21:13, there are 8 epochs of low activity and this one that he ends on his the 9th, which supports my idea that it is 2 epochs of low/inactivity for a set amount of active time - not just cumulatively 4 epochs of inactivity. it also supports my theory that he ends on the 5th epoch of inactivity, not the 4th.
+```{r ID 11516771, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 11516771
+phil_start_time <- ymd_hms("2008-11-22 21:13:00")
+phil_end_time <- ymd_hms("2008-11-22 21:34:00")
+w_start_time <- ymd_hms("2008-11-22 21:15:30")
+w_end_time <- ymd_hms("2008-11-22 21:36:00")
+phil_bout_duration <- 21.5
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+kable(table %>% filter(!is.na(bout_label)))
+
+```
+
+
+**ID 10902186**: This is the same scenario as id 11516771 where we start on an active epoch and then hit 4 inactive epochs then have a string of activity, which prompts us to wait to start the bout until a few minutes after phil, at which point we do enter into a bout. 
+```{r ID 10902186, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 10902186
+phil_start_time <- ymd_hms("2008-09-09 07:14:00")
+phil_end_time <- ymd_hms("2008-09-09 07:33:00")
+w_start_time <- ymd_hms("2008-09-09 07:17:00")
+w_end_time <- ymd_hms("2008-09-09 07:35:30")
+phil_bout_duration <- 19.5
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+kable(table %>% filter(!is.na(bout_label)))
+
+```
+
+
+**ID 10704259**: We start a bout at 14:22:00 on an active epoch. We end it at 14:33:30 when there are 4+ periods of inactivity.Phil ends at the same point for the same reason, presumably. Phil starts his bout on an active epoch at 14:25 presumably because he had been trying to start bouts before that and hitting his threshold of cumulative low/inactivity. This difference can be attributed to a difference in our implementation of cumulative vs consecutive thresholds for ending a bout and thus for where we begin bouts based on where other bouts end
+```{r ID 10704259, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 10704259
+phil_start_time <- ymd_hms("2008-09-10 14:25:00")
+phil_end_time <- ymd_hms("2008-09-10 14:33:00")
+w_start_time <- ymd_hms("2008-09-10 14:22:00")
+w_end_time <- ymd_hms("2008-09-10 14:33:30")
+phil_bout_duration <- 9
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+kable(table %>% filter(!is.na(bout_label)))
+
+```
+
+
+**ID 14427353**: This is the same scenario as above with different starts/stops due to differences in cumulative/consecutive inactivity to end a bout. we are already in a bout when phil starts this one! 
+```{r ID 14427353, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 14427353
+phil_start_time <- ymd_hms("2009-05-29 13:55:00")
+phil_end_time <- ymd_hms("2009-05-29 14:06:00")
+w_start_time <- ymd_hms("2009-05-29 13:49:00")
+w_end_time <- ymd_hms("2009-05-29 14:06:00")
+phil_bout_duration <- 11
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+kable(table %>% filter(!is.na(bout_label)))
+
+```
+
+
+**ID 10300768**: Phil shouldn't have called this a bout because he says a bout must be at least 7 min... in any case, i dont know why this one is on the csv becuase we do start a bout at the same time as phil and we also end at the same time. perhaps this is something that i fixed at some point, but there is no issue here. 
+```{r ID 10300768, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 10300768
+phil_start_time <- ymd_hms("2008-08-20 21:15:00")
+phil_end_time <- ymd_hms("2008-08-20 21:20:00")
+w_start_time <- ymd_hms("2008-08-20 21:15:00")
+w_end_time <- ymd_hms("2008-08-20 21:20:00")
+phil_bout_duration <- 6
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+kable(table %>% filter(!is.na(bout_label)))
+
+```
+
+\pagebreak
+
+
+### Section 2: GPS Dwell bout radii investigation 
+
+*PA bouts occurring within a single location were considered as “dwells,” which were considered non-walking by definition. Identifying a dwell bout was accomplished by (1) calculating the sum of distances from each point to all other points within the bout; (2) selecting points having sum distance below the 95th percentile of the sum distances of all points in the bout; (3) generating a minimum bounding circle fully containing the selected points; (4) finally obtaining the circle’s radius. Bouts with radii <= 66 ft were considered as dwell bouts. Because some non-dwell bouts with few GPS observations were likely to have radii <= 66 ft, dwell bouts were defined as having >=10 GPS points.*
+<p>
+*Three types of issues to look into, will look at 2 of each:* 
+*1. Phil identifies a dwell bout and Weipeng identifies nothing* 
+*2. Phil identifies a dwell bout and Weipeng identifies a walk bout* 
+*3. Phil identifies a dwell bout and Weipeng identifies a nonwalk2_gps_speed bout* 
+<p>
+\bigskip
+
+
+#### 1. Phil identifies a dwell bout and Weipeng identifies nothing
+<p>
+
+**ID 11613715**: This issue is similar to the issues described in the previous section of this document. Phil starts a bout at 15:03 with a single active period followed by 4 low active periods, which end our bout and make us restart the bout at 15:06, at which point we begin a bout that goes until 16:06 as well. I could see Phil starting this bout, reaching the 4 epochs of low active, and continuing because he ends when he hits the 5th (he allows for 4 and then stops at the next one) - however, at 15:11 there is another low active epoch, which should have theoretically ended his bout because that is the 5th low active epoch in his bout (assuming his accelerometry processing is correct). The only other explanation which is mentioned elsewhere in this document is that it is not simply a threshold of 4 low/inactive epochs, but rather some ratio of low/inactive epochs to active epochs. 
+This does bring up a question I have, though, which is: 
+*Should we be allowing for 5 low active/inactive epochs and ending on the active epoch before the 5th? We can do this counting consecutively in the same way phil does it counting cumulatively. Right now, when we hit 4 low active epochs, that ends our bout. If someone were to be active on the 5th epoch, should we allow the bout to continue?*
+```{r ID 11613715, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 11613715
+phil_start_time <- ymd_hms("2008-11-15 15:03:00")
+w_start_time <- ymd_hms("2008-11-15 15:06:00")
+phil_end_time <- ymd_hms("2008-11-15 16:06:00")
+w_end_time <- ymd_hms("2008-11-15 16:06:30")
+phil_bout_duration <- 64
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+```
+
+**ID 11516901**: This seems like partially a merge issue on our end - we do start a bout at 22:10 as well, but we end the bout at 22:16. This is because at 22:17 we commence 4 epochs in a row of low activity. Phil ends at 22:22 on a low active epoch that theoretically puts him over his cumulative threshold of 4 epochs within a bout and ending when we hit a 5th of low/inactivity. However, there are 3 low active epochs at 22:11:00, 22:11:30, and 22:12:00. So, if I understand his algorithm correctly, he should have ended when we did because at 22:17:00 and 22:17:30 the fourth/fifth low active epoch occurs.
+```{r ID 11516901, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 11516901
+phil_start_time <- ymd_hms("2008-11-07 22:10:00")
+w_start_time <- ymd_hms("2008-11-07 22:10:30")
+phil_end_time <- ymd_hms("2008-11-07 22:22:00")
+w_end_time <- ymd_hms("2008-11-07 22:16:30")
+phil_bout_duration <- 12
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+kable(table %>% filter(!is.na(bout_label)))
+
+```
+
+<p>
+<p>
+#### 2. Phil identifies a dwell bout and Weipeng identifies a walk bout
+<p>
+
+**ID 10101312**: I think that this is a bug in our GPS code and in Phil's. We have 3 rows of long/lat gps data and the threshold per phil's paper and our refvalues is at least 5 rows of gps data. So, this should not be a dwell bout. that said, it should also not be a walk bout - we label walk1_GPS as 1 but sufficient_GPS_coverage is FALSE. i do not think this is possible. I have edited line 178 of process_one_subject to reflect this change and make walk1_GPS 1 when all existing conditions are true AND we have sufficient GPS coverage. Steve, I believe this is correct but please let me know if i am incorrect here.
+
+```{r ID 10101312, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 10101312
+phil_start_time <- ymd_hms("2008-07-12 21:31:00")
+w_start_time <- ymd_hms("2008-07-12 21:31:00")
+phil_end_time <- ymd_hms("2008-07-12 21:38:00")
+w_end_time <- ymd_hms("2008-07-12 21:39:00")
+phil_bout_duration <- 7
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+kable(table %>% filter(!is.na(bout_label)))
+
+```
+
+ID 10102248: We are calling this a walkbout and phil is calling it a dwell bout. This is a similar issue to #1 - i dont think we have the correct logic in here to differentiate sufficient gps coverage, insufficient gps coverage.
+
+It looks like the logic right now is as follows:
+1.	If there are not enough rows of lat/long data (where the threshold is 5 observations), then a bout cannot be a dwell bout and is labeled as having incomplete GPS coverage.
+2.	Dwell bouts are then compiled if they have sufficient gps coverage, and the remaining bouts are compiled into nonwalk_acc, nonwalk_gps, and walk_gps bouts based on (a) having complete days (complete days require that the net activity per day exceed the minimum wearing times), (b) is not a dwell bout, and (c) meets the speed requirements. There is nothing about GPS coverage in the categorization of the non-dwell bouts.
+
+I believe that this is an oversight, but want to clarify the various forms of GPS coverage metrics we have. For a given bout, we have:
+1.	Insufficient_GPS_coverage = 1 if we do not have enough rows of lat/long data
+   a.	(`nrow(Point_ind)<refvalues_s$min_gps_consec_obs, refvalues_s$min_gps_consec_obs = 5"`)
+2.	 sufficient_GPS_records = TRUE if the number of valid GPS records for that bout is greater than our minimum GPS observation within bout requirement, which is 5
+   a.	(`n_valid_GPS_records>refvalues$min_gps_obs_within_bout, refvalues$min_gps_obs_within_bout = 5"`)
+3.	sufficient_GPS_coverage = TRUE if the GPS coverage ratio that we compute as the valid GPS records (a valid record is where speed, lat, long are all not NA) during that bout over the number of records included in that bout.
+   a.	(`GPS_coverage_ratio>refvalues$min_gps_coverage_ratio, refvalues$min_gps_coverage_ratio = 0.2"`)
+
+However, these values are never used to distinguish whether a bout is a walk bout or not. The only metric used is insufficient_gps_coverage to assess whether an identified dwell bout can be considered a dwell bout.
+```{r ID 10102248, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 10102248
+phil_start_time <- ymd_hms("2008-07-29 13:22:00")
+w_start_time <- ymd_hms("2008-07-29 13:22:00")
+phil_end_time <- ymd_hms("2008-07-29 13:29:00")
+w_end_time <- ymd_hms("2008-07-29 13:29:00")
+phil_bout_duration <- 8
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+kable(table %>% filter(!is.na(bout_label)))
+
+```
+
+<p>
+<p>
+#### 3. Phil identifies a dwell bout and Weipeng identifies a nonwalk2_gps_speed bout
+<p>
+
+**ID 10800490**: 
+*Question: where did we get the label nonwalk2_gps_speed from weipeng's output? I cannot find that label in the actual code.*
+This bout is identified by both weipeng and phil as a dwell bout - i am not sure why it does not show up in the spreadsheet that we generated! But, it ALSO shows up at a nonwalk bout because the speeds are too slow to be considered walking (the speed range is 0.1-1 and the speed range we require is 2-5.). As such, NonWalk2_GPS is 1 and dwell_bout is 1 as well. 
+So, I think that this is sort of an edge case and is not an error in anyone's code, but is likely due to some filtering or collapse issues. I'd be curious if Phil also marks it as both a dwell_bout and a nonwalk bout due to speed. 
+This brings up a few questions: 
+*1. It seems like a lot of dwell bouts would have speeds below the speed threshold for a bout. So, is it wrong that this is marked as both a dwell bout and a nonwalk bout due to speed? Should we mark dwell bout as 0 once non walk due to speed is marked as 1?*
+*TODO: do we ever remove the dwell bout label?*
+```{r ID 10800490, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 10800490
+phil_start_time <- ymd_hms("2008-09-14 12:34:00")
+w_start_time <- ymd_hms("2008-09-14 12:34:00")
+phil_end_time <- ymd_hms("2008-09-14 12:44:00")
+w_end_time <- ymd_hms("2008-09-14 12:44:00")
+phil_bout_duration <- 10.5
+
+min_gps_walking_speed_km_h <- 2
+max_gps_walking_speed_km_h <- 6
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+kable(table %>% filter(!is.na(bout_label)))
+
+
+```
+
+**ID 10705609**: This is the exact same situation as ID 10800490 above, but also ends at a different time due to the consecutive vs cumulative counting of low/inactive epochs to end a bout. 
+```{r ID 10705609, echo=TRUE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
+id <- 10705609
+phil_start_time <- ymd_hms("2008-09-29 12:42:00")
+w_start_time <- ymd_hms("2008-09-29 12:42:00")
+phil_end_time <- ymd_hms("2008-09-29 12:54:00")
+w_end_time <- ymd_hms("2008-09-29 12:56:00")
+phil_bout_duration <- 13
+
+df <- read.csv(paste0("~/walkbout_csvs/", id, "_gps_acc.csv"))
+
+table <- df %>%
+  mutate(epoch_time = ymd_hms(epoch_time)) %>% 
+  filter(epoch_time > min(phil_start_time, w_start_time)) %>% 
+  filter(epoch_time < max(phil_end_time, w_end_time)) %>% 
+  select("epoch_time", "Axis1_epochSum", "Activity", "bout_label", "gps_inlier", 
+         "epoch_time", "LATITUDE", "LONGITUDE", "Point_circle_area", "Point_radius", "incomplete_GPS")
+bout <- table %>% filter(!(is.na(bout_label)))
+bout <- unique(bout$bout_label)
+bout_plot(id, gps_thresh, low_active_thresh, table)
+kable(table %>% filter(!is.na(bout_label)))
+
+```
+
+
+\pagebreak
+
+#### Code Appendix
+
+```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
