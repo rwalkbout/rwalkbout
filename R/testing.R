@@ -61,9 +61,9 @@ gps_bouts_for_id <- function(trac_id) {
                         # c("start_time", "duration_m", "walk_type", "mean_speed_kmh")
                         ])
 }
-gps_bouts_for_id('10100052') # person ID is 10100052. this is looking at what bouts are identified for this person.
-all_bouts_for_id('10100052')
-test <- all_bouts_for_id('10100052')
+phil <- gps_bouts_for_id('10100725') # person ID is 10100052. this is looking at what bouts are identified for this person.
+all_bouts_for_id('10100725')
+test <- all_bouts_for_id('10100725')
 # should be able to run github code on raw data and get the same # of bouts for each person as we get when we run this here.
 
 

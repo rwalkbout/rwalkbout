@@ -1,3 +1,4 @@
+setwd("~/repos/rwalkbout/R/")
 source("setup.R")
 source("util.R")
 library("measurements")
@@ -15,7 +16,10 @@ if(!(dir.exists(result_save_folder))){
 file_mapper_result <- seattle_baseline_1_file_mapper(acc_folder_path=acc_folder_path, gps_folder_path=gps_folder_path)
 # for testing:
   subject_subset <- c()
-  # subject_subset <- c("20199020_baseline_1", "10100052_baseline_1")
+  subject_subset <- c("10902186_baseline_1",  "10705609_baseline_1")
+  # "10100725_baseline_1", "14835176_baseline_1", "14830788_baseline_1", "13322435_baseline_1","10101700_baseline_1", "11516771_baseline_1",
+  # "10902186_baseline_1", "10704259_baseline_1", "14427353_baseline_1", "10300768_baseline_1","11613715_baseline_1", "11516901_baseline_1",
+  # "10102248_baseline_1", "10800490_baseline_1","10101329_baseline_1",
 if(length(subject_subset)>0){
   file_mapper_result <- file_mapper_result[file_mapper_result$subject_id %in% subject_subset,]
 }

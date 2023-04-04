@@ -1,5 +1,7 @@
 # this pipeline is for processing one subject's data only
 process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, acc_file_reader=NULL, gps_file_reader=NULL) {
+  subject_id <- substr(acc_file_path, 29, 36)
+  print(subject_id)
   start = proc.time()
 
   expect_false(is.null(acc_file_reader))
@@ -55,7 +57,6 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
   epoch_series <- epoch_series %>%
     mutate(epoch_date=as.Date(epoch_time)) %>%
     merge(epoch_date_summ, by='epoch_date', all=T)
-
   #' Stage II: GPS data processing
   # 1. read in the corresponding GPS file
   gps_data <- gps_file_reader(gps_file_path=gps_file_path)
@@ -103,23 +104,22 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
     sufficient_GPS_records = n_valid_GPS_records>refvalues$min_gps_obs_within_bout,
     sufficient_GPS_coverage = GPS_coverage_ratio>refvalues$min_gps_coverage_ratio)
 
+  gps_acc <- gps_acc %>% mutate(row = 1:nrow(gps_acc), gps_inlier = NA, incomplete_GPS = NA)
   # unique bouts
   bouts <- gps_acc %>% filter(!is.na(bout_label)) %>% .$bout_label %>% unique()
-
   # loop through bouts and generate bounding circle
   for (eachbout in bouts){
     # 5. identify unique spatial points
     Point_ind <- gps_acc %>%
-      filter(bout_label==eachbout & !is.na(LONGITUDE) & !is.na(LATITUDE)) %>%
-      select(LONGITUDE, LATITUDE) %>%
-      .[!duplicated(.)]
-
+      filter(bout_label==eachbout) %>%
+      filter(!is.na(LONGITUDE) & !is.na(LATITUDE)) %>%
+      # select(LONGITUDE, LATITUDE, row) %>%
+      distinct(LONGITUDE, LATITUDE, .keep_all = TRUE)
     # if no spatial information, skip
-    if (nrow(Point_ind)<refvalues_s$min_gps_consec_obs){
+    if ((gps_dq %>% filter(bout_label==eachbout))$sufficient_GPS_records == FALSE & (gps_dq %>% filter(bout_label==eachbout))$sufficient_GPS_coverage == FALSE){
       gps_acc[bout_label==eachbout, incomplete_GPS:= 1]
       next
     }
-
     # generate unique Points as SpatialPoint object
     # 6. generate the distance matrix
     Distances <- SpatialPoints(coords = cbind(long = Point_ind$LONGITUDE, lat = Point_ind$LATITUDE)) %>%
@@ -131,6 +131,7 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
 
     # 9. identify the radius of the bounding circle containing the selected points
     P_obj <- Point_ind[KeepPoints,] %>%
+      select(LONGITUDE, LATITUDE) %>%
       convert_points_to_multipoint_polygon(.) %>% # generate bout points
       convert_bounding_circle(., gps_data=gps_acc, eachbout=eachbout) # generate bounding circle (longlat coordinates)
 
@@ -140,30 +141,29 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
     gps_acc[bout_label==eachbout, Point_circle_area:=P_area]
     P_radii <- sqrt(P_area/pi) %>% conv_unit(., from='m', to='ft') # Area = pi*r^2; r units should be in m
     gps_acc[bout_label==eachbout, Point_radius:=P_radii]
-    # browser()
+    pts <- cbind(KeepPoints, Point_ind) %>% select(row, KeepPoints)
+    gps_acc <- merge(gps_acc, pts, by = c("row"), all.x = TRUE) %>% mutate(gps_inlier = ifelse(bout_label==eachbout, KeepPoints, gps_inlier)) %>% select(-c(KeepPoints))
 
     # assign figure title
     title(paste0('Bout ',toString(eachbout),': ',toString(round(P_radii,3)), ' feet circle radius'), add=TRUE)
-
     # 11. evaluate circle radius for dwell bout category (if case_when condition met, assign 1)
     gps_acc[bout_label==eachbout, dwell_bout:= case_when(Point_radius<=refvalues_s$max_dwellbout_radii_ft & n_distinct(epoch_time)>=refvalues_s$min_dwellbout_obs ~ 1)]
   }
-
+  write.csv(gps_acc, paste0("~/walkbout_csvs/", subject_id, "_gps_acc.csv"))
   if (!("dwell_bout" %in% colnames(gps_acc)) && sum(gps_acc$incomplete_GPS[!is.na(gps_acc$incomplete_GPS)] != 1) == 0) {  # no dwell bout at all due to incomplete GPS for all bouts
     message("This subject's all bouts have incomplete GPS coverage, returning result of zero row")
-    tbl_colnames <- c('bout_label','NonWalk1_ACC','NonWalk2_GPS','Walk1_GPS','n_epochs','min_accel_count','mean_accel_count','max_accel_count','complete_days','sufficient_GPS_coverage','dwell_bouts','median_speed','bout_start_date','bout_start_time','bout_end_date','bout_end_time', "This subject's all bouts have incomplete GPS coverage, returning result of zero row")
+    tbl_colnames <- c('bout_label','NonWalk1_ACC','NonWalk2_GPS','Walk1_GPS','n_epochs','min_accel_count','mean_accel_count','max_accel_count','complete_days','sufficient_GPS_coverage','dwell_bouts','median_speed','mean_speed','bout_start_date','bout_start_time','bout_end_date','bout_end_time', "This subject's all bouts have incomplete GPS coverage, returning result of zero row")
     empty_df <- read_csv("\n", col_names = tbl_colnames)
     return(empty_df)
   }
-
   # summarise the bout_labels for dwell_bouts
   epoch_summary <- gps_acc %>%
     group_by(bout_label) %>%
-    summarise(dwell_bouts=ifelse(sum(dwell_bout, na.rm=T)>1, 1, 0)) %>% # removing NaN values
+    summarise(dwell_bouts=ifelse(sum(dwell_bout, na.rm=T)>1, 1, 0),
+              incomplete_GPS = incomplete_GPS[1]) %>% # removing NaN values
     data.table() %>%
     merge(epoch_series, ., by='bout_label', all=T) %>% # merge in the epoch_series data
     merge(., gps_dq, by='bout_label', all=T) # merge in the data quality assessment and complete days
-  browser()
   # find different kinds of bouts
   epoch_summary <- epoch_summary %>%
     group_by(bout_label) %>%
@@ -173,21 +173,20 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
       max_accel_count = max(Axis1_epochSum, na.rm = T),
       NonWalk1_ACC = case_when(mean_accel_count>=refvalues_s$max_light_moderate_pa_cpe ~1), # too fast; running/driving
       NonWalk2_GPS = case_when((complete_days==T & dwell_bouts==1) | # dwell-bout
-                                 (complete_days==T & dwell_bouts==0 &
+                                 (complete_days==T & dwell_bouts==0 & any(is.na(incomplete_GPS)) &
                                    (median_speed < refvalues_s$min_gps_walking_speed_km_h | median_speed >refvalues_s$max_gps_walking_speed_km_h)) ~1), # treadmill or bicycle
-      Walk1_GPS = case_when(complete_days==T & dwell_bouts==0 & any(sufficient_GPS_coverage != FALSE) &
+      Walk1_GPS = case_when(complete_days==T & dwell_bouts==0 & any(is.na(incomplete_GPS)) &
                               median_speed >= refvalues_s$min_gps_walking_speed_km_h & median_speed <=refvalues_s$max_gps_walking_speed_km_h ~ 1)) %>% # walk bouts
-    data.table()
 
+    data.table()
   # summarize each bout category
   bout_summary <- epoch_summary %>%
     select(bout_label,
            NonWalk1_ACC, NonWalk2_GPS, Walk1_GPS,
            n_epochs, min_accel_count, mean_accel_count, max_accel_count,
-           complete_days, sufficient_GPS_coverage, dwell_bouts, median_speed) %>%
+           complete_days, sufficient_GPS_coverage, dwell_bouts, median_speed, mean_speed) %>%
     .[!duplicated(.)] %>%
     filter(!is.na(bout_label))
-
   # with start-end date summary
   select_first_or_last_row <- function (dataframe, first_row=NULL, ...) {
     if (first_row) {
@@ -200,24 +199,22 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
   }
 
   bout_start <- epoch_summary %>%
-    select(epoch_date, epoch_time, bout_label, NonWalk1_ACC, NonWalk2_GPS, Walk1_GPS, n_epochs, min_accel_count, mean_accel_count, max_accel_count, complete_days, sufficient_GPS_coverage, sufficient_GPS_coverage, dwell_bouts, median_speed) %>%
-    group_by(bout_label, NonWalk1_ACC, NonWalk2_GPS, Walk1_GPS, n_epochs, min_accel_count, mean_accel_count, max_accel_count, complete_days, sufficient_GPS_coverage, dwell_bouts, median_speed) %>%
+    select(epoch_date, epoch_time, bout_label, NonWalk1_ACC, NonWalk2_GPS, Walk1_GPS, n_epochs, min_accel_count, mean_accel_count, max_accel_count, complete_days, sufficient_GPS_coverage, sufficient_GPS_coverage, dwell_bouts, median_speed, mean_speed) %>%
+    group_by(bout_label, NonWalk1_ACC, NonWalk2_GPS, Walk1_GPS, n_epochs, min_accel_count, mean_accel_count, max_accel_count, complete_days, sufficient_GPS_coverage, dwell_bouts, median_speed, mean_speed) %>%
     group_modify(.f = select_first_or_last_row, .keep = TRUE, first_row=TRUE) %>%
     ungroup() %>%
     rename(bout_start_date=epoch_date, bout_start_time=epoch_time) %>%
     distinct() %>%
     filter(!is.na(bout_label))
-
   bout_end <- epoch_summary %>%
-    select(epoch_date, epoch_time, bout_label, NonWalk1_ACC, NonWalk2_GPS, Walk1_GPS, n_epochs, min_accel_count, mean_accel_count, max_accel_count, complete_days, sufficient_GPS_coverage, sufficient_GPS_coverage, dwell_bouts, median_speed) %>%
-    group_by(bout_label, NonWalk1_ACC, NonWalk2_GPS, Walk1_GPS, n_epochs, min_accel_count, mean_accel_count, max_accel_count, complete_days, sufficient_GPS_coverage, dwell_bouts, median_speed) %>%
+    select(epoch_date, epoch_time, bout_label, NonWalk1_ACC, NonWalk2_GPS, Walk1_GPS, n_epochs, min_accel_count, mean_accel_count, max_accel_count, complete_days, sufficient_GPS_coverage, sufficient_GPS_coverage, dwell_bouts, median_speed, mean_speed) %>%
+    group_by(bout_label, NonWalk1_ACC, NonWalk2_GPS, Walk1_GPS, n_epochs, min_accel_count, mean_accel_count, max_accel_count, complete_days, sufficient_GPS_coverage, dwell_bouts, median_speed, mean_speed) %>%
     group_modify(.f = select_first_or_last_row, .keep = TRUE, first_row=FALSE) %>%
     ungroup() %>%
     rename(bout_end_date=epoch_date, bout_end_time=epoch_time) %>%
     distinct() %>%
     filter(!is.na(bout_label))
-
-  summary_with_start_end_date <- inner_join(bout_start, bout_end, by=c( "bout_label", "NonWalk1_ACC", "NonWalk2_GPS", "Walk1_GPS", "n_epochs", "min_accel_count", "mean_accel_count", "max_accel_count", "complete_days", "sufficient_GPS_coverage", "dwell_bouts", "median_speed" ))
+  summary_with_start_end_date <- inner_join(bout_start, bout_end, by=c( "bout_label", "NonWalk1_ACC", "NonWalk2_GPS", "Walk1_GPS", "n_epochs", "min_accel_count", "mean_accel_count", "max_accel_count", "complete_days", "sufficient_GPS_coverage", "dwell_bouts", "median_speed", "mean_speed"))
   #summary_with_start_end_date <- summary_with_start_end_date %>% select(-c(bout_label, sufficient_GPS_coverage, bout_start_date, bout_end_date, complete_days))
   other_done = proc.time()
   message(paste0('other done in ', round((other_done - label1_done)[3], 2), ' s\n'))
