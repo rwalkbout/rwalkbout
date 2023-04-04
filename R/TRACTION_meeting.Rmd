@@ -38,12 +38,13 @@ source("~/repos/rwalkbout/R/get_speed_table.R")
 
 *Per Phil et al's paper: PA bouts were defined as time intervals having accelerometer counts > 500 counts per 30 s epoch (cpe) for at least 7 min, allowing for up to 2 min of epochs below that threshold during the 7 min interval.*
 <p>
-*Per Steve/Amy/Lauren conversations: We have decided that we will consider something a bout as long as it is at least 5 minutes.*
+*Per WalkboutR package decisions: We have decided that we will consider something a bout as long as it is at least 5 minutes.*
 *NOTE: all of this is done presuming that the accelerometry package processed the accelerometry data the same way/the correct way! I cannot use the package right now and thus cannot confirm this* 
 <p>
 <p>
 
 ### Section 1: Overall Concordance 
+In order to evaluate overall concordance between the results in Phil/Bumjoon's analysis and the WalkboutR package, we used a fuzzy merge that allowed for a 5 minute difference in bout start/end time in order for the merge to be successful. As such, if the start/end times for 2 bouts were more than 5 minutes apart, the bout identified by Phil/Bumjoon and the bout identified by WalkboutR were not matched. 
 ```{r concordance, echo=FALSE, include=TRUE, message = FALSE}
 
 merge_data <- get_merge_data()
@@ -64,7 +65,7 @@ kable(concordance, booktabs = T, escape = F) %>%
 <p>
 <p>
 
-**ID 10902186**:  
+**ID 10902186**: WalkboutR starts a bout later than Phil/Bumjoon becuase there are 4 epochs of low/inactivity, causing WalkboutR to try to start a bout at 7:14a, having the potential bout end 2.5 minutes later, then actually starting at 7:17a. 
 ```{r ID 10902186, echo=FALSE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
 id <- 10902186
 phil_start_time <- ymd_hms("2008-09-09 07:14:00")
@@ -89,7 +90,7 @@ bout_plot(id, gps_thresh, low_active_thresh, table)
 ```
 
 
-**ID 10704259**: We start a bout at 14:22:00 on an active epoch. We end it at 14:33:30 when there are 4+ periods of inactivity. Phil ends at the same point for the same reason. Phil starts his bout on an active epoch at 14:25 presumably because he had been trying to start bouts before that and hitting his threshold of cumulative low/inactivity. This difference can be attributed to a difference in our implementation of cumulative vs consecutive thresholds for ending a bout and thus for where we begin bouts based on where other bouts end.
+**ID 10704259**: WalkboutR starts a bout at 14:22:00 on an active epoch. WalkboutR ends it at 14:33:30 when there are 4+ periods of inactivity. Phil ends at the same point for the same reason. Phil starts his bout on an active epoch at 14:25 (I believe) because he had been trying to start bouts before that and hitting his threshold of cumulative low/inactivity. This difference can be attributed to a difference in our implementation of cumulative vs consecutive thresholds for ending a bout and thus for where we begin bouts based on where other bouts end.
 ```{r ID 10704259, echo=FALSE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
 id <- 10704259
 phil_start_time <- ymd_hms("2008-09-10 14:25:00")
@@ -114,7 +115,7 @@ bout_plot(id, gps_thresh, low_active_thresh, table)
 ```
 
 
-**ID 14427353**: This is the same scenario as above with different starts/stops due to differences in cumulative/consecutive inactivity to end a bout. we are already in a bout when phil starts this one! 
+**ID 14427353**: Another example similar to the one above.
 ```{r ID 14427353, echo=FALSE, include=TRUE, message = FALSE, fig.width=10, fig.height=10}
 id <- 14427353
 phil_start_time <- ymd_hms("2009-05-29 13:55:00")
@@ -145,10 +146,6 @@ bout_plot(id, gps_thresh, low_active_thresh, table)
 
 *PA bouts occurring within a single location were considered as “dwells,” which were considered non-walking by definition. Identifying a dwell bout was accomplished by (1) calculating the sum of distances from each point to all other points within the bout; (2) selecting points having sum distance below the 95th percentile of the sum distances of all points in the bout; (3) generating a minimum bounding circle fully containing the selected points; (4) finally obtaining the circle’s radius. Bouts with radii <= 66 ft were considered as dwell bouts. Because some non-dwell bouts with few GPS observations were likely to have radii <= 66 ft, dwell bouts were defined as having >=10 GPS points.*
 <p>
-*Three types of issues to look into, will look at 2 of each:* 
-*1. Phil identifies a dwell bout and Weipeng identifies nothing* 
-*2. Phil identifies a dwell bout and Weipeng identifies a walk bout* 
-*3. Phil identifies a dwell bout and Weipeng identifies a nonwalk2_gps_speed bout* 
 <p>
 
 ```{r speed, echo=FALSE, include=TRUE, message = FALSE}
@@ -171,7 +168,7 @@ speed_table_small <- speed_table_small %>%
 
 speed_table <- speed_table %>% 
   arrange(speed_flag) %>% 
-  rename("Walk Type (our code)" = walk_type.w, "Walk Type (Phil/Bumjoon code)" = walk_type.p, 
+  rename("Walk Type (WalkboutR package)" = walk_type.w, "Walk Type (Phil/Bumjoon code)" = walk_type.p, 
          "Speed Metric Equivalencies" = speed_flag, "Count" = count, "Percent of Total" = percent) 
 
 kable(speed_table_small) %>% kable_styling()

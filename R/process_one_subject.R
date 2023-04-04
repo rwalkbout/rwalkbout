@@ -109,7 +109,6 @@ process_one_subject <- function (acc_file_path, gps_file_path, time_zone=NULL, a
   bouts <- gps_acc %>% filter(!is.na(bout_label)) %>% .$bout_label %>% unique()
   # loop through bouts and generate bounding circle
   for (eachbout in bouts){
-    message(eachbout)
     # 5. identify unique spatial points
     Point_ind <- gps_acc %>%
       filter(bout_label==eachbout) %>%

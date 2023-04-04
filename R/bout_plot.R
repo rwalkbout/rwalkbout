@@ -78,7 +78,7 @@ bout_plot <- function(id, gps_thresh, low_active_thresh, epoch_series_df, leadin
     labs(x = "Time",
          y = "Accelerometer Counts",
          subtitle = paste0(row_count, " GPS data points"),
-         caption = "Pink shaded area = Phil's Bout, Gray = Weipeng's bout") +
+         caption = "Pink shaded area = Phil/Bumjoon's Bout, Gray = Walkboutr Package's bout") +
     theme_bw() +
     theme(legend.position = "none",
           panel.border = element_blank(),
